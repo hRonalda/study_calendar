@@ -282,9 +282,10 @@ export default function App() {
     const label = dayOnly ? `all ${count} "${title}" on ${selectedDayName}s` : `ALL ${count} "${title}" lessons`;
     if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
     try {
+      const tzOffset = new Date().getTimezoneOffset();
       const body = selectedSeriesId && dayOnly
         ? { seriesId: selectedSeriesId }
-        : dayOnly ? { title, dayOfWeek: selectedDayOfWeek } : { title };
+        : dayOnly ? { title, dayOfWeek: selectedDayOfWeek, tzOffset } : { title };
       await fetch(`${API}/lessons/series`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       setEvents((prev) => prev.filter((e) => {
         if (selectedSeriesId && dayOnly) return e.extendedProps.seriesId !== selectedSeriesId;
@@ -301,9 +302,10 @@ export default function App() {
     if (!selectedEvent) return;
     const { title } = selectedEvent;
     try {
+      const tzOffset = new Date().getTimezoneOffset();
       const body = selectedSeriesId
         ? { seriesId: selectedSeriesId, startTime: newStart, endTime: newEnd }
-        : { title, dayOfWeek: selectedDayOfWeek, startTime: newStart, endTime: newEnd };
+        : { title, dayOfWeek: selectedDayOfWeek, startTime: newStart, endTime: newEnd, tzOffset };
       const res = await fetch(`${API}/lessons/series/reschedule`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

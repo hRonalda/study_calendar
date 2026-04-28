@@ -23,7 +23,7 @@ router.post("/", async (req, res) => {
 
 // DELETE lessons by seriesId OR title + optional dayOfWeek
 router.delete("/series", async (req, res) => {
-  const { title, dayOfWeek, seriesId } = req.body;
+  const { title, dayOfWeek, seriesId, tzOffset = 0 } = req.body;
   let targets;
   if (seriesId) {
     targets = await Lesson.find({ seriesId });
@@ -31,7 +31,10 @@ router.delete("/series", async (req, res) => {
     if (!title) return res.status(400).json({ error: "title or seriesId required" });
     const all = await Lesson.find({ title });
     targets = dayOfWeek !== undefined
-      ? all.filter((l) => new Date(l.start).getDay() === Number(dayOfWeek))
+      ? all.filter((l) => {
+          const localMs = new Date(l.start).getTime() - Number(tzOffset) * 60000;
+          return new Date(localMs).getUTCDay() === Number(dayOfWeek);
+        })
       : all;
   }
   await Lesson.deleteMany({ _id: { $in: targets.map((l) => l._id) } });
@@ -40,7 +43,7 @@ router.delete("/series", async (req, res) => {
 
 // PATCH reschedule by seriesId OR title + dayOfWeek
 router.patch("/series/reschedule", async (req, res) => {
-  const { title, dayOfWeek, startTime, endTime, seriesId } = req.body;
+  const { title, dayOfWeek, startTime, endTime, seriesId, tzOffset = 0 } = req.body;
   if (!startTime || !endTime) return res.status(400).json({ error: "startTime, endTime required" });
   const [sh, sm] = startTime.split(":").map(Number);
   const [eh, em] = endTime.split(":").map(Number);
@@ -50,7 +53,10 @@ router.patch("/series/reschedule", async (req, res) => {
   } else {
     if (!title) return res.status(400).json({ error: "title or seriesId required" });
     const all = await Lesson.find({ title });
-    targets = all.filter((l) => new Date(l.start).getDay() === Number(dayOfWeek));
+    targets = all.filter((l) => {
+      const localMs = new Date(l.start).getTime() - Number(tzOffset) * 60000;
+      return new Date(localMs).getUTCDay() === Number(dayOfWeek);
+    });
   }
   for (const lesson of targets) {
     const s = new Date(lesson.start); s.setHours(sh, sm, 0, 0);
