@@ -546,9 +546,9 @@ export default function App() {
             eventChange={handleEventChange}
             events={filteredEvents}
             eventContent={(arg) => (
-              <div style={{ padding: "2px 6px", overflow: "hidden", height: "100%" }}>
-                <div style={{ fontSize: "10px", opacity: 0.85, whiteSpace: "nowrap" }}>{arg.timeText}</div>
-                <div style={{ fontSize: "11px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{arg.event.title}</div>
+              <div style={{ padding: "2px 6px", overflow: "hidden", height: "100%", width: "100%", background: arg.event.backgroundColor, borderRadius: "4px" }}>
+                <div style={{ fontSize: "10px", color: "#fff", opacity: 0.88, whiteSpace: "nowrap" }}>{arg.timeText}</div>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{arg.event.title}</div>
               </div>
             )}
             height="auto"

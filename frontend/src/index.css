@@ -125,8 +125,9 @@ body {
 }
 
 .fc .fc-daygrid-day-number {
-  color: var(--cal-text);
+  color: #1e293b;
   font-size: 12px;
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -171,6 +172,19 @@ body {
 
 .fc .fc-daygrid-event {
   border-radius: 4px !important;
+  opacity: 1 !important;
+  padding: 1px 5px !important;
+}
+
+.fc .fc-daygrid-event .fc-event-title,
+.fc .fc-daygrid-event .fc-event-time {
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+}
+
+.fc .fc-daygrid-dot-event .fc-event-title {
+  color: #1e293b !important;
 }
 
 .fc .fc-timegrid-now-indicator-line {
