@@ -21,14 +21,18 @@ router.post("/", async (req, res) => {
   res.status(201).json(populated);
 });
 
-// DELETE lessons by seriesId OR title + optional dayOfWeek
+// DELETE lessons by ids array (preferred) OR seriesId OR title + optional dayOfWeek
 router.delete("/series", async (req, res) => {
-  const { title, dayOfWeek, seriesId, tzOffset = 0 } = req.body;
+  const { ids, title, dayOfWeek, seriesId, tzOffset = 0 } = req.body;
   let targets;
+  if (ids && ids.length > 0) {
+    await Lesson.deleteMany({ _id: { $in: ids } });
+    return res.json({ deleted: ids.length });
+  }
   if (seriesId) {
     targets = await Lesson.find({ seriesId });
   } else {
-    if (!title) return res.status(400).json({ error: "title or seriesId required" });
+    if (!title) return res.status(400).json({ error: "ids, title, or seriesId required" });
     const all = await Lesson.find({ title });
     targets = dayOfWeek !== undefined
       ? all.filter((l) => {

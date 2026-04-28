@@ -282,17 +282,15 @@ export default function App() {
     const label = dayOnly ? `all ${count} "${title}" on ${selectedDayName}s` : `ALL ${count} "${title}" lessons`;
     if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
     try {
-      const tzOffset = new Date().getTimezoneOffset();
-      const body = selectedSeriesId && dayOnly
-        ? { seriesId: selectedSeriesId }
-        : dayOnly ? { title, dayOfWeek: selectedDayOfWeek, tzOffset } : { title };
-      await fetch(`${API}/lessons/series`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      setEvents((prev) => prev.filter((e) => {
-        if (selectedSeriesId && dayOnly) return e.extendedProps.seriesId !== selectedSeriesId;
-        if (e.title !== title) return true;
-        if (!dayOnly) return false;
-        return new Date(e.start).getDay() !== selectedDayOfWeek;
-      }));
+      const toDelete = events.filter((e) => {
+        if (selectedSeriesId && dayOnly) return e.extendedProps.seriesId === selectedSeriesId;
+        if (e.title !== title) return false;
+        if (!dayOnly) return true;
+        return new Date(e.start).getDay() === selectedDayOfWeek;
+      });
+      const ids = toDelete.map((e) => e.id);
+      await fetch(`${API}/lessons/series`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+      setEvents((prev) => prev.filter((e) => !ids.includes(e.id)));
       setSelectedEventId(null);
       setExpanded(false);
     } catch (err) { console.error("Failed to delete series:", err); }
