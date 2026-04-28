@@ -69,7 +69,7 @@ const S = {
   }),
 };
 
-export default function RecurringModal({ open, onClose, onCreated }) {
+export default function RecurringModal({ open, onClose, onCreated, existingEvents = [] }) {
   const [step, setStep]           = useState(1); // 1=config, 2=daterange
   const [title, setTitle]         = useState("");
   const [selDays, setSelDays]     = useState([]);
@@ -100,17 +100,13 @@ export default function RecurringModal({ open, onClose, onCreated }) {
   const handleCreate = async () => {
     if (!canCreate) return;
     // Check for existing lessons with same title before creating
-    const base = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
-    try {
-      const existing = await fetch(`${base}/lessons`).then((r) => r.json());
-      const duplicates = existing.filter((l) => l.title === title);
-      if (duplicates.length > 0) {
-        const ok = window.confirm(
-          `There are already ${duplicates.length} "${title}" lessons in your calendar.\n\nCreate ${previewCount} more anyway?\n\nTip: use "Delete All Series" on an existing lesson to clear them first.`
-        );
-        if (!ok) return;
-      }
-    } catch { /* non-blocking */ }
+    const duplicates = existingEvents.filter((l) => l.title === title);
+    if (duplicates.length > 0) {
+      const ok = window.confirm(
+        `There are already ${duplicates.length} "${title}" lessons in your calendar.\n\nCreate ${previewCount} more anyway?\n\nTip: use "Delete All Series" on an existing lesson to clear them first.`
+      );
+      if (!ok) return;
+    }
 
     setCreating(true);
     try {
@@ -202,7 +198,7 @@ export default function RecurringModal({ open, onClose, onCreated }) {
                     const [eh, em] = endTime.split(":").map(Number);
                     const diffMins = (eh * 60 + em) - (sh * 60 + sm);
                     const duration = diffMins > 0 ? `${Math.floor(diffMins/60)}h${diffMins%60 ? ` ${diffMins%60}m` : ""}` : "⚠️ end is before start";
-                    return <span>🕐 <b style={{ color: "#dde3f0" }}>{fmt(startTime)}</b> → <b style={{ color: diffMins > 0 ? "#dde3f0" : "#f87171" }}>{fmt(endTime)}</b> &nbsp;·&nbsp; {duration}</span>;
+                    return <span>🕐 <b style={{ color: "#dde3f0" }}>{fmt(startTime)}</b> <span style={{ color: "#7c86a0" }}>({startTime})</span> → <b style={{ color: diffMins > 0 ? "#dde3f0" : "#f87171" }}>{fmt(endTime)}</b> <span style={{ color: "#7c86a0" }}>({endTime})</span> &nbsp;·&nbsp; {duration}</span>;
                   })()}
                 </div>
               )}

@@ -726,7 +726,8 @@ export default function App() {
       <RecurringModal
         open={recurringOpen}
         onClose={() => setRecurringOpen(false)}
-        onCreated={(newLessons) => setEvents((prev) => [...prev, ...newLessons.map(dbToCalEvent)])}
+        existingEvents={events}
+      onCreated={(newLessons) => setEvents((prev) => [...prev, ...newLessons.map(dbToCalEvent)])}
       />
     </div>
   );
