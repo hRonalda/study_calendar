@@ -1,0 +1,80 @@
+import express from "express";
+import Lesson from "../models/Lesson.js";
+
+const router = express.Router();
+
+// GET all lessons (optionally filter by course)
+router.get("/", async (req, res) => {
+  const filter = {};
+  if (req.query.course) filter.course = req.query.course;
+  const lessons = await Lesson.find(filter).populate("course", "name color");
+  res.json(lessons);
+});
+
+// POST create lesson
+router.post("/", async (req, res) => {
+  const { title, course, start, end, status, note, links } = req.body;
+  if (!title || !start || !end)
+    return res.status(400).json({ error: "title, start, and end are required" });
+  const lesson = await Lesson.create({ title, course, start, end, status, note, links });
+  const populated = await lesson.populate("course", "name color");
+  res.status(201).json(populated);
+});
+
+// DELETE lessons by title + optional dayOfWeek (0=Sun…6=Sat)
+router.delete("/series", async (req, res) => {
+  const { title, dayOfWeek } = req.body;
+  if (!title) return res.status(400).json({ error: "title required" });
+  const all = await Lesson.find({ title });
+  const targets = dayOfWeek !== undefined
+    ? all.filter((l) => new Date(l.start).getDay() === Number(dayOfWeek))
+    : all;
+  await Lesson.deleteMany({ _id: { $in: targets.map((l) => l._id) } });
+  res.json({ deleted: targets.length });
+});
+
+// PATCH reschedule all lessons by title + dayOfWeek to new start/end time
+router.patch("/series/reschedule", async (req, res) => {
+  const { title, dayOfWeek, startTime, endTime } = req.body;
+  if (!title || !startTime || !endTime) return res.status(400).json({ error: "title, startTime, endTime required" });
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
+  const all = await Lesson.find({ title });
+  const targets = all.filter((l) => new Date(l.start).getDay() === Number(dayOfWeek));
+  for (const lesson of targets) {
+    const s = new Date(lesson.start); s.setHours(sh, sm, 0, 0);
+    const e = new Date(lesson.start); e.setHours(eh, em, 0, 0);
+    lesson.start = s; lesson.end = e;
+    await lesson.save();
+  }
+  const updated = await Lesson.find({ _id: { $in: targets.map((l) => l._id) } });
+  res.json({ updated: updated.length, lessons: updated });
+});
+
+// POST bulk create lessons
+router.post("/bulk", async (req, res) => {
+  const { lessons } = req.body;
+  if (!Array.isArray(lessons) || lessons.length === 0)
+    return res.status(400).json({ error: "lessons array required" });
+  const created = await Lesson.insertMany(lessons);
+  res.status(201).json(created);
+});
+
+// PATCH update lesson
+router.patch("/:id", async (req, res) => {
+  const lesson = await Lesson.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  }).populate("course", "name color");
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  res.json(lesson);
+});
+
+// DELETE lesson
+router.delete("/:id", async (req, res) => {
+  const lesson = await Lesson.findByIdAndDelete(req.params.id);
+  if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+  res.json({ message: "Lesson deleted" });
+});
+
+export default router;

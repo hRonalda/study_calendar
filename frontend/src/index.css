@@ -1,0 +1,124 @@
+:root {
+  --bg:         #0d1117;
+  --surface:    #161c2c;
+  --surface-2:  #1e2640;
+  --border:     #2a3354;
+  --text:       #dde3f0;
+  --muted:      #7c86a0;
+  --accent:     #818cf8;
+  --planned:    #818cf8;
+  --in-progress:#fb923c;
+  --done:       #4ade80;
+  --danger:     #f87171;
+  --radius:     8px;
+  --font:       system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ───── FullCalendar overrides ───── */
+.fc {
+  --fc-border-color:              var(--border);
+  --fc-today-bg-color:            rgba(129,140,248,0.06);
+  --fc-neutral-bg-color:          var(--surface);
+  --fc-page-bg-color:             var(--bg);
+  --fc-now-indicator-color:       var(--danger);
+  --fc-highlight-color:           rgba(129,140,248,0.18);
+  --fc-non-business-color:        rgba(255,255,255,0.012);
+  --fc-button-bg-color:           var(--surface-2);
+  --fc-button-border-color:       var(--border);
+  --fc-button-hover-bg-color:     var(--border);
+  --fc-button-hover-border-color: var(--border);
+  --fc-button-active-bg-color:    var(--accent);
+  --fc-button-active-border-color:var(--accent);
+  --fc-button-text-color:         var(--text);
+  font-family: var(--font) !important;
+  font-size: 13px !important;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 15px !important;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.fc .fc-button {
+  font-size: 12px !important;
+  padding: 5px 11px !important;
+  border-radius: 6px !important;
+  text-transform: capitalize !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th,
+.fc-theme-standard .fc-scrollgrid {
+  border-color: var(--border) !important;
+}
+
+.fc .fc-col-header-cell {
+  background: var(--surface);
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.fc .fc-timegrid-slot-label-cushion {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.fc .fc-timegrid-axis {
+  background: var(--surface);
+}
+
+.fc .fc-event {
+  border: none !important;
+  border-radius: 5px !important;
+  padding: 2px 5px !important;
+  font-size: 12px !important;
+  cursor: pointer;
+}
+
+.fc .fc-event-title {
+  font-weight: 500;
+}
+
+.fc .fc-daygrid-event {
+  border-radius: 4px !important;
+}
+
+.fc .fc-timegrid-now-indicator-line {
+  border-color: var(--danger);
+}
+
+.fc .fc-toolbar.fc-header-toolbar {
+  margin-bottom: 12px !important;
+  gap: 8px;
+}
