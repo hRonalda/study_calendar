@@ -100,8 +100,9 @@ export default function RecurringModal({ open, onClose, onCreated }) {
   const handleCreate = async () => {
     if (!canCreate) return;
     // Check for existing lessons with same title before creating
+    const base = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
     try {
-      const existing = await fetch(`/api/lessons`).then((r) => r.json());
+      const existing = await fetch(`${base}/lessons`).then((r) => r.json());
       const duplicates = existing.filter((l) => l.title === title);
       if (duplicates.length > 0) {
         const ok = window.confirm(
@@ -114,7 +115,7 @@ export default function RecurringModal({ open, onClose, onCreated }) {
     setCreating(true);
     try {
       const lessons = buildLessons(coursesForCreate, semStart, semEnd);
-      const res = await fetch("/api/lessons/bulk", {
+      const res = await fetch(`${base}/lessons/bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lessons }),

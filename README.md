@@ -52,10 +52,11 @@ PORT=5001
 
 ### Running
 
-Open two terminals:
+To use it locally every time, open two terminals:
 
 ```bash
 # Terminal 1 — backend
+brew services start mongodb-community   # If not already running                                                                                               
 cd backend && npm run dev
 
 # Terminal 2 — frontend

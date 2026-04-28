@@ -63,7 +63,7 @@ router.post("/bulk", async (req, res) => {
 // PATCH update lesson
 router.patch("/:id", async (req, res) => {
   const lesson = await Lesson.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   }).populate("course", "name color");
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
