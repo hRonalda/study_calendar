@@ -12,13 +12,21 @@
   --danger:     #f87171;
   --radius:     8px;
   --font:       system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* calendar palette */
+  --cal-bg:       #ffffff;
+  --cal-bg-today: #eef2ff;
+  --cal-border:   #e2e8f0;
+  --cal-header:   #f1f5f9;
+  --cal-text:     #334155;
+  --cal-muted:    #94a3b8;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: #f0f4f8;
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
@@ -30,32 +38,110 @@ body {
   min-height: 100vh;
 }
 
-/* ───── FullCalendar overrides ───── */
+/* ───── FullCalendar — complete light theme ───── */
 .fc {
-  --fc-border-color:              var(--border);
-  --fc-today-bg-color:            rgba(129,140,248,0.06);
-  --fc-neutral-bg-color:          var(--surface);
-  --fc-page-bg-color:             var(--bg);
-  --fc-now-indicator-color:       var(--danger);
-  --fc-highlight-color:           rgba(129,140,248,0.18);
-  --fc-non-business-color:        rgba(255,255,255,0.012);
-  --fc-button-bg-color:           var(--surface-2);
-  --fc-button-border-color:       var(--border);
-  --fc-button-hover-bg-color:     var(--border);
-  --fc-button-hover-border-color: var(--border);
-  --fc-button-active-bg-color:    var(--accent);
-  --fc-button-active-border-color:var(--accent);
-  --fc-button-text-color:         var(--text);
+  --fc-border-color:               var(--cal-border);
+  --fc-today-bg-color:             var(--cal-bg-today);
+  --fc-neutral-bg-color:           var(--cal-header);
+  --fc-page-bg-color:              var(--cal-bg);
+  --fc-now-indicator-color:        #f87171;
+  --fc-highlight-color:            rgba(129,140,248,0.15);
+  --fc-non-business-color:         rgba(0,0,0,0.02);
+  --fc-button-bg-color:            var(--surface-2);
+  --fc-button-border-color:        var(--border);
+  --fc-button-hover-bg-color:      var(--border);
+  --fc-button-hover-border-color:  var(--border);
+  --fc-button-active-bg-color:     var(--accent);
+  --fc-button-active-border-color: var(--accent);
+  --fc-button-text-color:          var(--text);
   font-family: var(--font) !important;
   font-size: 13px !important;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
+/* ── force white background on every cell type ── */
+.fc td,
+.fc th,
+.fc .fc-timegrid-slot,
+.fc .fc-timegrid-col,
+.fc .fc-timegrid-body,
+.fc .fc-daygrid-day,
+.fc .fc-daygrid-body,
+.fc .fc-scrollgrid,
+.fc .fc-scrollgrid-section > td,
+.fc .fc-timegrid-axis,
+.fc .fc-daygrid-day-frame,
+.fc .fc-timegrid-col-frame {
+  background-color: var(--cal-bg) !important;
+}
+
+/* today column */
+.fc .fc-day-today,
+.fc .fc-timegrid-col.fc-day-today {
+  background-color: var(--cal-bg-today) !important;
+}
+
+/* all-day row */
+.fc .fc-daygrid-day {
+  background-color: var(--cal-bg) !important;
+}
+
+/* column headers */
+.fc .fc-col-header-cell,
+.fc .fc-timegrid-axis {
+  background-color: var(--cal-header) !important;
+}
+
+/* all borders */
+.fc-theme-standard td,
+.fc-theme-standard th,
+.fc-theme-standard .fc-scrollgrid {
+  border-color: var(--cal-border) !important;
+}
+
+/* hide 30-min slot lines */
+.fc .fc-timegrid-slot-minor {
+  border-top: none !important;
+}
+
+.fc .fc-timegrid-slot {
+  height: 3em !important;
+}
+
+/* header text */
 .fc .fc-toolbar-title {
   font-size: 15px !important;
   font-weight: 600;
-  color: var(--text);
+  color: #1e293b;
 }
 
+.fc .fc-col-header-cell-cushion {
+  color: var(--cal-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 6px 4px;
+}
+
+.fc .fc-daygrid-day-number {
+  color: var(--cal-text);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.fc .fc-day-today .fc-col-header-cell-cushion {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* time labels */
+.fc .fc-timegrid-slot-label-cushion {
+  color: var(--cal-muted);
+  font-size: 11px;
+}
+
+/* toolbar buttons */
 .fc .fc-button {
   font-size: 12px !important;
   padding: 5px 11px !important;
@@ -72,42 +158,15 @@ body {
   color: #fff !important;
 }
 
-.fc-theme-standard td,
-.fc-theme-standard th,
-.fc-theme-standard .fc-scrollgrid {
-  border-color: var(--border) !important;
-}
-
-.fc .fc-col-header-cell {
-  background: var(--surface);
-}
-
-.fc .fc-col-header-cell-cushion,
-.fc .fc-daygrid-day-number {
-  color: var(--muted);
-  font-size: 12px;
-  text-decoration: none;
-}
-
-.fc .fc-timegrid-slot-label-cushion {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.fc .fc-timegrid-axis {
-  background: var(--surface);
-}
-
+/* events */
 .fc .fc-event {
   border: none !important;
-  border-radius: 5px !important;
-  padding: 2px 5px !important;
+  border-radius: 6px !important;
+  padding: 0 !important;
   font-size: 12px !important;
   cursor: pointer;
-}
-
-.fc .fc-event-title {
-  font-weight: 500;
+  overflow: hidden !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
 .fc .fc-daygrid-event {
@@ -115,7 +174,7 @@ body {
 }
 
 .fc .fc-timegrid-now-indicator-line {
-  border-color: var(--danger);
+  border-color: #f87171;
 }
 
 .fc .fc-toolbar.fc-header-toolbar {

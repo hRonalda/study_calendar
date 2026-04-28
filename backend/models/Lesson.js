@@ -13,6 +13,7 @@ const lessonSchema = new mongoose.Schema(
     },
     note: { type: String, default: "" },
     links: { type: [String], default: [] },
+    color: { type: String, default: null },
   },
   { timestamps: true }
 );

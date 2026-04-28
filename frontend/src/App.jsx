@@ -3,9 +3,12 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import RecurringModal from "./RecurringModal.jsx";
 
 const API = "/api";
+
 
 const STATUS_META = {
   planned:     { label: "Planned",     color: "#818cf8", bg: "rgba(129,140,248,0.14)" },
@@ -64,10 +67,10 @@ function getVideoEmbed(url) {
 // ── Shared style tokens ─────────────────────────────────────
 const input = {
   width: "100%",
-  background: "#1e2640",
-  border: "1px solid #2a3354",
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
   borderRadius: "6px",
-  color: "#dde3f0",
+  color: "#1e293b",
   padding: "8px 10px",
   fontSize: "13px",
   outline: "none",
@@ -81,13 +84,13 @@ const label = {
   fontWeight: "600",
   textTransform: "uppercase",
   letterSpacing: "0.07em",
-  color: "#7c86a0",
+  color: "#64748b",
   marginBottom: "5px",
 };
 
 const card = {
-  background: "#161c2c",
-  border: "1px solid #2a3354",
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
   borderRadius: "10px",
   padding: "20px",
 };
@@ -95,7 +98,7 @@ const card = {
 const iconBtn = {
   background: "none",
   border: "none",
-  color: "#7c86a0",
+  color: "#94a3b8",
   cursor: "pointer",
   fontSize: "18px",
   lineHeight: 1,
@@ -112,6 +115,7 @@ export default function App() {
   const [seriesOpen, setSeriesOpen]       = useState(false);
   const [rescheduleTime, setRescheduleTime] = useState({ start: "", end: "" });
   const [searchQuery, setSearchQuery]       = useState("");
+  const [notePreview, setNotePreview]       = useState(true);
   const calendarRef   = useRef(null);
   const modalInputRef = useRef(null);
 
@@ -176,7 +180,7 @@ export default function App() {
 
   const closeModal = () => setModal({ open: false, title: "", start: "", end: "" });
 
-  const handleEventClick  = (info) => { setSelectedEventId(info.event.id); setSeriesOpen(false); };
+  const handleEventClick  = (info) => { setSelectedEventId(info.event.id); setSeriesOpen(false); setNotePreview(true); };
   const handleDateClick   = () => closePanel();
   const handleUnselect    = () => setSelectedEventId(null);
 
@@ -326,9 +330,9 @@ export default function App() {
               onClick={() => { updateSelected({ extendedProps: { status: key } }); saveLesson(selectedEventId, { status: key }); }}
               style={{
                 flex: 1, padding: "5px 0", borderRadius: "20px",
-                border: `1px solid ${active ? meta.color : "#2a3354"}`,
+                border: `1px solid ${active ? meta.color : "#e2e8f0"}`,
                 background: active ? meta.bg : "transparent",
-                color: active ? meta.color : "#7c86a0",
+                color: active ? meta.color : "#94a3b8",
                 fontSize: "11px", fontWeight: "600", cursor: "pointer",
                 letterSpacing: "0.02em", transition: "all 0.12s",
               }}
@@ -355,16 +359,50 @@ export default function App() {
     </>
   );
 
-  const NoteField = ({ minHeight = "88px" }) => (
+  const NoteField = ({ minHeight = "88px", allowPreview = false }) => (
     <div style={{ display: "flex", flexDirection: "column", flex: minHeight === "100%" ? 1 : "none" }}>
-      <label style={label}>Note</label>
-      <textarea
-        style={{ ...input, minHeight, resize: "vertical", lineHeight: "1.6", flex: minHeight === "100%" ? 1 : "none" }}
-        value={selectedEvent.extendedProps.note || ""}
-        onChange={(e) => updateSelected({ extendedProps: { note: e.target.value } })}
-        onBlur={() => saveLesson(selectedEventId, { note: selectedEvent.extendedProps.note })}
-        placeholder="Add notes — supports any freeform text, outlines, questions…"
-      />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+        <label style={{ ...label, margin: 0 }}>Note</label>
+        {allowPreview && (
+          <button onClick={() => setNotePreview((p) => !p)}
+            style={{ background: "transparent", border: "none", color: notePreview ? "#818cf8" : "#7c86a0", cursor: "pointer", fontSize: "11px", fontWeight: "600", padding: "2px 0" }}>
+            {notePreview ? "✎ Edit" : "👁 Preview"}
+          </button>
+        )}
+      </div>
+      {allowPreview && notePreview ? (
+        <div style={{
+          ...input, minHeight, overflowY: "auto", lineHeight: "1.7",
+          color: "#1e293b", fontSize: "13px",
+        }}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+            code({ inline, children }) {
+              return inline
+                ? <code style={{ background: "#e8edf5", borderRadius: "4px", padding: "1px 5px", fontFamily: "monospace", color: "#0f766e", fontSize: "12px" }}>{children}</code>
+                : <pre style={{ background: "#1e293b", borderRadius: "6px", padding: "12px", overflowX: "auto", margin: "8px 0" }}><code style={{ fontFamily: "monospace", fontSize: "12px", color: "#4ade80", whiteSpace: "pre" }}>{children}</code></pre>;
+            },
+            h1: ({ children }) => <h1 style={{ fontSize: "16px", color: "#0f172a", margin: "10px 0 4px", fontWeight: "700" }}>{children}</h1>,
+            h2: ({ children }) => <h2 style={{ fontSize: "14px", color: "#0f172a", margin: "8px 0 4px", fontWeight: "700" }}>{children}</h2>,
+            h3: ({ children }) => <h3 style={{ fontSize: "13px", color: "#1e293b", margin: "6px 0 3px", fontWeight: "600" }}>{children}</h3>,
+            ul: ({ children }) => <ul style={{ paddingLeft: "18px", margin: "4px 0" }}>{children}</ul>,
+            ol: ({ children }) => <ol style={{ paddingLeft: "18px", margin: "4px 0" }}>{children}</ol>,
+            li: ({ children }) => <li style={{ marginBottom: "2px", color: "#1e293b" }}>{children}</li>,
+            p: ({ children }) => <p style={{ margin: "4px 0", color: "#1e293b" }}>{children}</p>,
+            a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "#818cf8" }}>{children}</a>,
+            blockquote: ({ children }) => <blockquote style={{ borderLeft: "3px solid #cbd5e1", margin: "6px 0", paddingLeft: "10px", color: "#475569" }}>{children}</blockquote>,
+          }}>
+            {selectedEvent.extendedProps.note || ""}
+          </ReactMarkdown>
+        </div>
+      ) : (
+        <textarea
+          style={{ ...input, minHeight, resize: "vertical", lineHeight: "1.6", flex: minHeight === "100%" ? 1 : "none" }}
+          value={selectedEvent.extendedProps.note || ""}
+          onChange={(e) => updateSelected({ extendedProps: { note: e.target.value } })}
+          onBlur={() => saveLesson(selectedEventId, { note: selectedEvent.extendedProps.note })}
+          placeholder="Markdown supported — **bold**, `code`, ```code blocks```, ## headings, - lists…"
+        />
+      )}
     </div>
   );
 
@@ -378,7 +416,7 @@ export default function App() {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {(selectedEvent.extendedProps.links || []).length === 0 && (
-          <p style={{ margin: 0, fontSize: "12px", color: "#7c86a0", fontStyle: "italic" }}>
+          <p style={{ margin: 0, fontSize: "12px", color: "#94a3b8", fontStyle: "italic" }}>
             No resources yet — type or paste a link here.
           </p>
         )}
@@ -399,7 +437,7 @@ export default function App() {
                 />
                 {link && (
                   <a href={link} target="_blank" rel="noopener noreferrer"
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", borderRadius: "6px", background: "#1e2640", border: "1px solid #2a3354", color: "#818cf8", fontSize: "13px", textDecoration: "none", flexShrink: 0 }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", borderRadius: "6px", background: "#f0f4ff", border: "1px solid #e2e8f0", color: "#818cf8", fontSize: "13px", textDecoration: "none", flexShrink: 0 }}
                     title="Open"
                   >↗</a>
                 )}
@@ -425,15 +463,15 @@ export default function App() {
 
   // ───────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "24px 28px", maxWidth: "1440px", margin: "0 auto" }}>
+    <div style={{ padding: "24px 28px", maxWidth: "1440px", margin: "0 auto", minHeight: "100vh" }}>
 
       {/* ── Header ── */}
       <div style={{ marginBottom: "14px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: "20px", fontWeight: "600", color: "#dde3f0", display: "flex", alignItems: "center", gap: "9px" }}>
-            <span>📚</span> Study Calendar
+          <h1 style={{ margin: 0, fontSize: "20px", fontWeight: "700", color: "#1e293b", display: "flex", alignItems: "center", gap: "9px" }}>
+            Welcome, this is your study calendar
           </h1>
-          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#7c86a0" }}>
+          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#64748b" }}>
             Click a time slot to add a lesson · Drag events to reschedule
           </p>
         </div>
@@ -461,10 +499,10 @@ export default function App() {
         {/* Progress bar */}
         <div style={{ flex: 1, minWidth: "180px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-            <span style={{ fontSize: "11px", color: "#7c86a0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.06em" }}>Overall</span>
-            <span style={{ fontSize: "11px", color: "#dde3f0" }}>{doneCount} / {totalCount} done</span>
+            <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.06em" }}>Overall</span>
+            <span style={{ fontSize: "11px", color: "#334150" }}>{doneCount} / {totalCount} done</span>
           </div>
-          <div style={{ height: "5px", borderRadius: "3px", background: "#1e2640", overflow: "hidden" }}>
+          <div style={{ height: "5px", borderRadius: "3px", background: "#b0c1f7", overflow: "hidden" }}>
             <div style={{ height: "100%", width: totalCount ? `${(doneCount / totalCount) * 100}%` : "0%", background: "linear-gradient(90deg, #818cf8, #4ade80)", borderRadius: "3px", transition: "width 0.4s ease" }} />
           </div>
         </div>
@@ -494,7 +532,7 @@ export default function App() {
       <div style={{ display: "flex", gap: "18px", alignItems: "flex-start" }}>
 
         {/* Calendar */}
-        <div style={{ flex: 3, minWidth: 0 }}>
+        <div style={{ flex: 3, minWidth: 0, background: "#fff", borderRadius: "12px", overflow: "hidden", border: "1px solid #e2e8f0" }}>
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -507,22 +545,29 @@ export default function App() {
             unselect={handleUnselect}
             eventChange={handleEventChange}
             events={filteredEvents}
+            eventContent={(arg) => (
+              <div style={{ padding: "2px 6px", overflow: "hidden", height: "100%" }}>
+                <div style={{ fontSize: "10px", opacity: 0.85, whiteSpace: "nowrap" }}>{arg.timeText}</div>
+                <div style={{ fontSize: "11px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{arg.event.title}</div>
+              </div>
+            )}
             height="auto"
             displayEventEnd
             slotMinTime="07:00:00"
             slotMaxTime="22:00:00"
+            slotLabelInterval="01:00:00"
             eventTimeFormat={{ hour: "2-digit", minute: "2-digit", meridiem: false }}
           />
         </div>
 
         {/* ── Side detail panel ── */}
-        <div style={{ flex: 1, minWidth: "300px", maxWidth: "330px", position: "sticky", top: "24px" }}>
+        <div style={{ flex: 1, minWidth: "380px", maxWidth: "440px", position: "sticky", top: "24px" }}>
           {selectedEvent ? (
             <div style={{ ...card, display: "flex", flexDirection: "column", gap: "15px" }}>
 
               {/* Panel header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em", color: "#7c86a0" }}>
+                <span style={{ fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>
                   Lesson Details
                 </span>
                 <div style={{ display: "flex", gap: "2px" }}>
@@ -533,50 +578,48 @@ export default function App() {
 
               {TitleField()}
               {StatusField()}
+
               {DateFields()}
-              {NoteField({ minHeight: "88px" })}
+              {NoteField({ minHeight: "88px", allowPreview: true })}
               {LinksField({ showEmbed: false })}
 
               {/* ── Delete / Series actions ── */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #2a3354", paddingTop: "12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
                 <button onClick={deleteLesson}
-                  style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(248,113,113,0.28)", background: "rgba(248,113,113,0.07)", color: "#f87171", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
+                  style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
                 >Delete This Lesson</button>
 
                 <button onClick={() => { setSeriesOpen((p) => !p); setRescheduleTime({ start: "", end: "" }); }}
-                  style={{ padding: "8px", borderRadius: "6px", border: "1px solid #2a3354", background: "transparent", color: "#7c86a0", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
+                  style={{ padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "#f8fafc", color: "#64748b", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
                 >{seriesOpen ? "▲ Hide Series Actions" : `▼ Series Actions (${selectedDayName} ${selectedEvent?.title})`}</button>
 
                 {seriesOpen && (
-                  <div style={{ background: "#1a1f35", border: "1px solid #2a3354", borderRadius: "8px", padding: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {/* Reschedule */}
+                  <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
                     <div>
-                      <p style={{ margin: "0 0 6px", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.07em", color: "#7c86a0" }}>
+                      <p style={{ margin: "0 0 6px", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.07em", color: "#64748b" }}>
                         Reschedule all {selectedDayName} {selectedEvent?.title} ({seriesDayCount} lessons)
                       </p>
                       <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
                         <input type="time" value={rescheduleTime.start} onChange={(e) => setRescheduleTime((p) => ({ ...p, start: e.target.value }))}
-                          style={{ flex: 1, background: "#1e2640", border: "1px solid #2a3354", borderRadius: "6px", color: "#dde3f0", padding: "6px 8px", fontSize: "12px", outline: "none", minWidth: "80px" }} />
-                        <span style={{ color: "#7c86a0", fontSize: "12px" }}>→</span>
+                          style={{ flex: 1, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "6px", color: "#1e293b", padding: "6px 8px", fontSize: "12px", outline: "none", minWidth: "80px" }} />
+                        <span style={{ color: "#94a3b8", fontSize: "12px" }}>→</span>
                         <input type="time" value={rescheduleTime.end} onChange={(e) => setRescheduleTime((p) => ({ ...p, end: e.target.value }))}
-                          style={{ flex: 1, background: "#1e2640", border: "1px solid #2a3354", borderRadius: "6px", color: "#dde3f0", padding: "6px 8px", fontSize: "12px", outline: "none", minWidth: "80px" }} />
+                          style={{ flex: 1, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "6px", color: "#1e293b", padding: "6px 8px", fontSize: "12px", outline: "none", minWidth: "80px" }} />
                         <button
                           disabled={!rescheduleTime.start || !rescheduleTime.end}
                           onClick={async () => { await rescheduleSeries(rescheduleTime.start, rescheduleTime.end); setSeriesOpen(false); }}
-                          style={{ padding: "6px 10px", borderRadius: "6px", border: "none", background: rescheduleTime.start && rescheduleTime.end ? "#818cf8" : "#2a3354", color: rescheduleTime.start && rescheduleTime.end ? "#fff" : "#7c86a0", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
+                          style={{ padding: "6px 10px", borderRadius: "6px", border: "none", background: rescheduleTime.start && rescheduleTime.end ? "#818cf8" : "#e2e8f0", color: rescheduleTime.start && rescheduleTime.end ? "#fff" : "#94a3b8", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
                         >Apply</button>
                       </div>
                     </div>
 
-                    {/* Delete day series */}
                     <button onClick={() => deleteSeries(true)}
-                      style={{ padding: "7px", borderRadius: "6px", border: "1px solid rgba(248,113,113,0.25)", background: "rgba(248,113,113,0.07)", color: "#f87171", cursor: "pointer", fontSize: "12px", fontWeight: "500" }}
+                      style={{ padding: "7px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "12px", fontWeight: "500" }}
                     >Delete all {selectedDayName} "{selectedEvent?.title}" ({seriesDayCount} lessons)</button>
 
-                    {/* Delete all days */}
                     {seriesTotalCount > seriesDayCount && (
                       <button onClick={() => deleteSeries(false)}
-                        style={{ padding: "7px", borderRadius: "6px", border: "1px solid rgba(248,113,113,0.18)", background: "transparent", color: "#f87171", cursor: "pointer", fontSize: "11px", opacity: 0.7 }}
+                        style={{ padding: "7px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.18)", background: "transparent", color: "#ef4444", cursor: "pointer", fontSize: "11px", opacity: 0.7 }}
                       >Delete ALL "{selectedEvent?.title}" every day ({seriesTotalCount} lessons)</button>
                     )}
                   </div>
@@ -584,10 +627,10 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <div style={{ ...card, border: "1px dashed #2a3354", textAlign: "center", padding: "44px 20px" }}>
+            <div style={{ ...card, border: "1px dashed #e2e8f0", textAlign: "center", padding: "44px 20px" }}>
               <div style={{ fontSize: "28px", marginBottom: "12px" }}>🗓</div>
-              <p style={{ margin: "0 0 6px", fontSize: "13px", fontWeight: "500", color: "#c0c9de" }}>No lesson selected</p>
-              <p style={{ margin: 0, fontSize: "12px", color: "#7c86a0", lineHeight: "1.6" }}>
+              <p style={{ margin: "0 0 6px", fontSize: "13px", fontWeight: "500", color: "#334155" }}>No lesson selected</p>
+              <p style={{ margin: 0, fontSize: "12px", color: "#64748b", lineHeight: "1.6" }}>
                 Click a time slot to create a new lesson, or click an existing event to edit it.
               </p>
             </div>
@@ -611,7 +654,7 @@ export default function App() {
             {/* Modal header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexShrink: 0 }}>
               <div>
-                <span style={{ fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em", color: "#7c86a0" }}>
+                <span style={{ fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>
                   Full View
                 </span>
                 <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#818cf8" }}>
@@ -628,10 +671,11 @@ export default function App() {
               <div style={{ width: "240px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px", overflowY: "auto" }}>
                 {TitleField()}
                 {StatusField()}
+  
                 {DateFields()}
-                <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid #2a3354" }}>
+                <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid #e2e8f0" }}>
                   <button onClick={deleteLesson}
-                    style={{ width: "100%", padding: "9px", borderRadius: "6px", border: "1px solid rgba(248,113,113,0.28)", background: "rgba(248,113,113,0.07)", color: "#f87171", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
+                    style={{ width: "100%", padding: "9px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
                   >Delete Lesson</button>
                 </div>
               </div>
@@ -641,7 +685,7 @@ export default function App() {
 
               {/* Right — content */}
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "20px", overflowY: "auto", paddingRight: "4px" }}>
-                {NoteField({ minHeight: "220px" })}
+                {NoteField({ minHeight: "220px", allowPreview: true })}
                 {LinksField({ showEmbed: true })}
               </div>
             </div>
@@ -656,7 +700,7 @@ export default function App() {
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
         >
           <div style={{ ...card, width: "360px", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
-            <h3 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: "600", color: "#dde3f0" }}>New Lesson</h3>
+            <h3 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: "600", color: "#1e293b" }}>New Lesson</h3>
             <p style={{ margin: "0 0 16px", fontSize: "12px", color: "#818cf8" }}>
               {formatModalTime(modal.start, modal.end)}
             </p>
@@ -670,10 +714,10 @@ export default function App() {
             />
             <div style={{ display: "flex", gap: "8px" }}>
               <button onClick={handleCreateLesson} disabled={!modal.title.trim()}
-                style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "none", background: modal.title.trim() ? "#818cf8" : "#2a3354", color: modal.title.trim() ? "#fff" : "#7c86a0", cursor: modal.title.trim() ? "pointer" : "default", fontSize: "13px", fontWeight: "600", transition: "background 0.12s" }}
+                style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "none", background: modal.title.trim() ? "#818cf8" : "#e2e8f0", color: modal.title.trim() ? "#fff" : "#94a3b8", cursor: modal.title.trim() ? "pointer" : "default", fontSize: "13px", fontWeight: "600", transition: "background 0.12s" }}
               >Create</button>
               <button onClick={closeModal}
-                style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "1px solid #2a3354", background: "transparent", color: "#7c86a0", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
+                style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "transparent", color: "#64748b", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
               >Cancel</button>
             </div>
           </div>
