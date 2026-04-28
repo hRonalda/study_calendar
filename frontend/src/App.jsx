@@ -34,6 +34,7 @@ function dbToCalEvent(lesson) {
       note: lesson.note || "",
       status: lesson.status,
       links: lesson.links || [],
+      seriesId: lesson.seriesId || null,
     },
   };
 }
@@ -249,8 +250,11 @@ export default function App() {
 
   const selectedDayOfWeek = selectedEvent ? new Date(selectedEvent.start).getDay() : null;
   const selectedDayName   = selectedDayOfWeek !== null ? DAY_NAMES[selectedDayOfWeek] : "";
+  const selectedSeriesId  = selectedEvent?.extendedProps?.seriesId ?? null;
   const seriesDayCount    = selectedEvent
-    ? events.filter((e) => e.title === selectedEvent.title && new Date(e.start).getDay() === selectedDayOfWeek).length
+    ? selectedSeriesId
+      ? events.filter((e) => e.extendedProps.seriesId === selectedSeriesId).length
+      : events.filter((e) => e.title === selectedEvent.title && new Date(e.start).getDay() === selectedDayOfWeek).length
     : 0;
   const seriesTotalCount  = selectedEvent ? events.filter((e) => e.title === selectedEvent.title).length : 0;
 
@@ -278,9 +282,12 @@ export default function App() {
     const label = dayOnly ? `all ${count} "${title}" on ${selectedDayName}s` : `ALL ${count} "${title}" lessons`;
     if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
     try {
-      const body = dayOnly ? { title, dayOfWeek: selectedDayOfWeek } : { title };
+      const body = selectedSeriesId && dayOnly
+        ? { seriesId: selectedSeriesId }
+        : dayOnly ? { title, dayOfWeek: selectedDayOfWeek } : { title };
       await fetch(`${API}/lessons/series`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       setEvents((prev) => prev.filter((e) => {
+        if (selectedSeriesId && dayOnly) return e.extendedProps.seriesId !== selectedSeriesId;
         if (e.title !== title) return true;
         if (!dayOnly) return false;
         return new Date(e.start).getDay() !== selectedDayOfWeek;
@@ -294,9 +301,12 @@ export default function App() {
     if (!selectedEvent) return;
     const { title } = selectedEvent;
     try {
+      const body = selectedSeriesId
+        ? { seriesId: selectedSeriesId, startTime: newStart, endTime: newEnd }
+        : { title, dayOfWeek: selectedDayOfWeek, startTime: newStart, endTime: newEnd };
       const res = await fetch(`${API}/lessons/series/reschedule`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, dayOfWeek: selectedDayOfWeek, startTime: newStart, endTime: newEnd }),
+        body: JSON.stringify(body),
       });
       const { lessons } = await res.json();
       setEvents((prev) => {

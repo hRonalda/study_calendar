@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+const base = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
+
 const DAYS = [
   { short: "Mon", full: "monday" },
   { short: "Tue", full: "tuesday" },
@@ -27,13 +29,14 @@ function generateDates(semStart, semEnd, dayFull) {
 function buildLessons(courses, semStart, semEnd) {
   const lessons = [];
   for (const c of courses) {
+    const seriesId = crypto.randomUUID();
     const dates = generateDates(semStart, semEnd, c.day);
     const [sh, sm] = c.startTime.split(":").map(Number);
     const [eh, em] = c.endTime.split(":").map(Number);
     for (const d of dates) {
       const start = new Date(d); start.setHours(sh, sm, 0, 0);
       const end   = new Date(d); end.setHours(eh, em, 0, 0);
-      lessons.push({ title: c.title, start: start.toISOString(), end: end.toISOString(), status: "planned" });
+      lessons.push({ title: c.title, start: start.toISOString(), end: end.toISOString(), status: "planned", seriesId });
     }
   }
   return lessons;

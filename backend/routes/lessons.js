@@ -21,26 +21,37 @@ router.post("/", async (req, res) => {
   res.status(201).json(populated);
 });
 
-// DELETE lessons by title + optional dayOfWeek (0=Sun…6=Sat)
+// DELETE lessons by seriesId OR title + optional dayOfWeek
 router.delete("/series", async (req, res) => {
-  const { title, dayOfWeek } = req.body;
-  if (!title) return res.status(400).json({ error: "title required" });
-  const all = await Lesson.find({ title });
-  const targets = dayOfWeek !== undefined
-    ? all.filter((l) => new Date(l.start).getDay() === Number(dayOfWeek))
-    : all;
+  const { title, dayOfWeek, seriesId } = req.body;
+  let targets;
+  if (seriesId) {
+    targets = await Lesson.find({ seriesId });
+  } else {
+    if (!title) return res.status(400).json({ error: "title or seriesId required" });
+    const all = await Lesson.find({ title });
+    targets = dayOfWeek !== undefined
+      ? all.filter((l) => new Date(l.start).getDay() === Number(dayOfWeek))
+      : all;
+  }
   await Lesson.deleteMany({ _id: { $in: targets.map((l) => l._id) } });
   res.json({ deleted: targets.length });
 });
 
-// PATCH reschedule all lessons by title + dayOfWeek to new start/end time
+// PATCH reschedule by seriesId OR title + dayOfWeek
 router.patch("/series/reschedule", async (req, res) => {
-  const { title, dayOfWeek, startTime, endTime } = req.body;
-  if (!title || !startTime || !endTime) return res.status(400).json({ error: "title, startTime, endTime required" });
+  const { title, dayOfWeek, startTime, endTime, seriesId } = req.body;
+  if (!startTime || !endTime) return res.status(400).json({ error: "startTime, endTime required" });
   const [sh, sm] = startTime.split(":").map(Number);
   const [eh, em] = endTime.split(":").map(Number);
-  const all = await Lesson.find({ title });
-  const targets = all.filter((l) => new Date(l.start).getDay() === Number(dayOfWeek));
+  let targets;
+  if (seriesId) {
+    targets = await Lesson.find({ seriesId });
+  } else {
+    if (!title) return res.status(400).json({ error: "title or seriesId required" });
+    const all = await Lesson.find({ title });
+    targets = all.filter((l) => new Date(l.start).getDay() === Number(dayOfWeek));
+  }
   for (const lesson of targets) {
     const s = new Date(lesson.start); s.setHours(sh, sm, 0, 0);
     const e = new Date(lesson.start); e.setHours(eh, em, 0, 0);
