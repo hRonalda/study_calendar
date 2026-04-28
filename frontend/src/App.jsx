@@ -111,6 +111,7 @@ export default function App() {
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [seriesOpen, setSeriesOpen]       = useState(false);
   const [rescheduleTime, setRescheduleTime] = useState({ start: "", end: "" });
+  const [searchQuery, setSearchQuery]       = useState("");
   const calendarRef   = useRef(null);
   const modalInputRef = useRef(null);
 
@@ -248,6 +249,23 @@ export default function App() {
     ? events.filter((e) => e.title === selectedEvent.title && new Date(e.start).getDay() === selectedDayOfWeek).length
     : 0;
   const seriesTotalCount  = selectedEvent ? events.filter((e) => e.title === selectedEvent.title).length : 0;
+
+  // ── Search filter ───────────────────────────────────────────
+  const filteredEvents = searchQuery.trim()
+    ? events.filter((e) =>
+        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (e.extendedProps.note || "").toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : events;
+
+  // ── Stats ───────────────────────────────────────────────────
+  const monday = (() => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0,0,0,0); return d; })();
+  const nextMonday = new Date(monday); nextMonday.setDate(monday.getDate() + 7);
+  const weekEvents  = events.filter((e) => { const d = new Date(e.start); return d >= monday && d < nextMonday; });
+  const weekTotal   = weekEvents.length;
+  const weekDone    = weekEvents.filter((e) => e.extendedProps.status === "done").length;
+  const totalCount  = events.length;
+  const doneCount   = events.filter((e) => e.extendedProps.status === "done").length;
 
   const deleteSeries = async (dayOnly) => {
     if (!selectedEvent) return;
@@ -410,7 +428,7 @@ export default function App() {
     <div style={{ padding: "24px 28px", maxWidth: "1440px", margin: "0 auto" }}>
 
       {/* ── Header ── */}
-      <div style={{ marginBottom: "22px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div style={{ marginBottom: "14px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <h1 style={{ margin: 0, fontSize: "20px", fontWeight: "600", color: "#dde3f0", display: "flex", alignItems: "center", gap: "9px" }}>
             <span>📚</span> Study Calendar
@@ -419,12 +437,57 @@ export default function App() {
             Click a time slot to add a lesson · Drag events to reschedule
           </p>
         </div>
-        <button
-          onClick={() => setRecurringOpen(true)}
-          style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid #2a3354", background: "#1e2640", color: "#818cf8", cursor: "pointer", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" }}
-        >
-          + Schedule Recurring
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+            <span style={{ position: "absolute", left: "9px", color: "#7c86a0", fontSize: "13px", pointerEvents: "none", lineHeight: 1 }}>⌕</span>
+            <input
+              style={{ ...input, width: "210px", paddingLeft: "28px" }}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search lessons & notes…"
+            />
+          </div>
+          <button
+            onClick={() => setRecurringOpen(true)}
+            style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid #2a3354", background: "#1e2640", color: "#818cf8", cursor: "pointer", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" }}
+          >
+            + Schedule Recurring
+          </button>
+        </div>
+      </div>
+
+      {/* ── Stats bar ── */}
+      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "18px", flexWrap: "wrap" }}>
+        {/* Progress bar */}
+        <div style={{ flex: 1, minWidth: "180px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+            <span style={{ fontSize: "11px", color: "#7c86a0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.06em" }}>Overall</span>
+            <span style={{ fontSize: "11px", color: "#dde3f0" }}>{doneCount} / {totalCount} done</span>
+          </div>
+          <div style={{ height: "5px", borderRadius: "3px", background: "#1e2640", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: totalCount ? `${(doneCount / totalCount) * 100}%` : "0%", background: "linear-gradient(90deg, #818cf8, #4ade80)", borderRadius: "3px", transition: "width 0.4s ease" }} />
+          </div>
+        </div>
+        {/* Status pills */}
+        {Object.entries(STATUS_META).map(([key, meta]) => {
+          const count = events.filter((e) => e.extendedProps.status === key).length;
+          return (
+            <div key={key} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "20px", background: meta.bg, border: `1px solid ${meta.color}44` }}>
+              <span style={{ fontSize: "13px", fontWeight: "700", color: meta.color }}>{count}</span>
+              <span style={{ fontSize: "11px", color: meta.color, opacity: 0.85 }}>{meta.label}</span>
+            </div>
+          );
+        })}
+        {/* This week */}
+        <div style={{ padding: "4px 12px", borderRadius: "20px", background: "rgba(129,140,248,0.08)", border: "1px solid rgba(129,140,248,0.22)", fontSize: "12px", color: "#818cf8", fontWeight: "600", whiteSpace: "nowrap" }}>
+          This week: {weekDone} / {weekTotal}
+        </div>
+        {/* Search result count */}
+        {searchQuery.trim() && (
+          <div style={{ padding: "4px 10px", borderRadius: "20px", background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.3)", fontSize: "12px", color: "#fb923c", fontWeight: "600" }}>
+            {filteredEvents.length} match{filteredEvents.length !== 1 ? "es" : ""}
+          </div>
+        )}
       </div>
 
       {/* ── Main layout ── */}
@@ -443,7 +506,7 @@ export default function App() {
             dateClick={handleDateClick}
             unselect={handleUnselect}
             eventChange={handleEventChange}
-            events={events}
+            events={filteredEvents}
             height="auto"
             displayEventEnd
             slotMinTime="07:00:00"
