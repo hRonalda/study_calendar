@@ -203,42 +203,51 @@ export default function App() {
     }
   };
 
-  const confirmDrag = async (all) => {
+  const confirmDrag = (all) => {
     if (!dragPending) return;
-    const { changeInfo, seriesId, title, dow, seriesCount } = dragPending;
+    const { changeInfo, seriesId, title, dow } = dragPending;
     const { event } = changeInfo;
     setDragPending(null);
 
     if (!all) {
-      saveLesson(event.id, { start: event.startStr, end: event.endStr });
+      // State already correct from handleEventChange — just persist to DB
+      fetch(`${API}/lessons/${event.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ start: event.startStr, end: event.endStr }),
+      }).catch(console.error);
       return;
     }
 
-    // Move all: compute new UTC HH:MM from dragged event
+    // Move all: update local state now, then persist to DB
     const s = new Date(event.startStr);
     const e = new Date(event.endStr);
+    const newSH = s.getHours(), newSM = s.getMinutes();
+    const newEH = e.getHours(), newEM = e.getMinutes();
+    setEvents((prev) => prev.map((ev) => {
+      const matches = seriesId
+        ? ev.extendedProps?.seriesId === seriesId
+        : ev.title === title && new Date(ev.start).getDay() === dow;
+      if (!matches) return ev;
+      const evS = new Date(ev.start); evS.setHours(newSH, newSM, 0, 0);
+      const evE = new Date(ev.start); evE.setHours(newEH, newEM, 0, 0);
+      return { ...ev, start: evS.toISOString(), end: evE.toISOString() };
+    }));
+
     const pad = (n) => String(n).padStart(2, "0");
     const off = new Date().getTimezoneOffset();
     const toUtc = (h, m) => {
       const u = ((h * 60 + m + off) % 1440 + 1440) % 1440;
       return `${pad(Math.floor(u / 60))}:${pad(u % 60)}`;
     };
-    const startTime = toUtc(s.getHours(), s.getMinutes());
-    const endTime   = toUtc(e.getHours(), e.getMinutes());
     const body = seriesId
-      ? { seriesId, startTime, endTime }
-      : { title, dayOfWeek: dow, startTime, endTime, tzOffset: off };
-    try {
-      const res = await fetch(`${API}/lessons/series/reschedule`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const { lessons } = await res.json();
-      setEvents((prev) => {
-        const map = Object.fromEntries(lessons.map((l) => [l._id, l]));
-        return prev.map((ev) => map[ev.id] ? dbToCalEvent(map[ev.id]) : ev);
-      });
-    } catch (err) { console.error("Reschedule series failed:", err); }
+      ? { seriesId, startTime: toUtc(newSH, newSM), endTime: toUtc(newEH, newEM) }
+      : { title, dayOfWeek: dow, startTime: toUtc(newSH, newSM), endTime: toUtc(newEH, newEM), tzOffset: off };
+    fetch(`${API}/lessons/series/reschedule`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(console.error);
   };
 
   const cancelDrag = () => {
