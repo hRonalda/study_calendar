@@ -83,6 +83,7 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
   const [semStart, setSemStart]   = useState("");
   const [semEnd, setSemEnd]       = useState("");
   const [creating, setCreating]   = useState(false);
+  const [conflictDays, setConflictDays] = useState([]);
 
   if (!open) return null;
 
@@ -100,23 +101,21 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
   const canProceedStep1 = title.trim() && selDays.length > 0;
   const canCreate = semStart && semEnd && previewCount > 0;
 
-  const handleCreate = async () => {
+  const handleCreate = async (force = false) => {
     if (!canCreate) return;
-    // Warn if any selected day already has lessons with this title
-    const conflicts = selDays.filter((day) => {
-      const targetDow = DAY_INDEX[day];
-      return existingEvents.some(
-        (l) => l.title === title.trim() && new Date(l.start).getDay() === targetDow
-      );
-    });
-    if (conflicts.length > 0) {
-      const dayLabels = conflicts.map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(", ");
-      const ok = window.confirm(
-        `"${title.trim()}" already exists on ${dayLabels}.\n\nCreating again will add a duplicate series on top of the existing one.\n\nContinue anyway?`
-      );
-      if (!ok) return;
+    if (!force) {
+      const conflicts = selDays.filter((day) => {
+        const targetDow = DAY_INDEX[day];
+        return existingEvents.some(
+          (l) => l.title === title.trim() && new Date(l.start).getDay() === targetDow
+        );
+      });
+      if (conflicts.length > 0) {
+        setConflictDays(conflicts);
+        return;
+      }
     }
-
+    setConflictDays([]);
     setCreating(true);
     try {
       const lessons = buildLessons(coursesForCreate, semStart, semEnd);
@@ -138,7 +137,7 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
   const handleClose = () => {
     setStep(1);
     setTitle(""); setSelDays([]); setStartTime("09:00"); setEndTime("11:00");
-    setSemStart(""); setSemEnd("");
+    setSemStart(""); setSemEnd(""); setConflictDays([]);
     onClose();
   };
 
@@ -249,11 +248,26 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
               )}
             </div>
 
-            <div style={{ display: "flex", gap: "8px", marginTop: "20px" }}>
+            {conflictDays.length > 0 && (
+              <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: "8px", padding: "12px 14px", marginTop: "14px" }}>
+                <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#f87171", fontWeight: "600" }}>
+                  ⚠ "{title.trim()}" already exists on {conflictDays.map((d) => d.slice(0,1).toUpperCase()+d.slice(1,3)).join(", ")}
+                </p>
+                <p style={{ margin: "0 0 10px", fontSize: "12px", color: "#f87171", opacity: 0.85 }}>
+                  Creating again will add a duplicate series. Are you sure?
+                </p>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={() => setConflictDays([])} style={{ ...S.btn(false), flex: "none", padding: "6px 14px" }}>Cancel</button>
+                  <button onClick={() => handleCreate(true)} style={{ ...S.btn(true), flex: "none", padding: "6px 14px", background: "#f87171" }}>Create Anyway</button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
               <button style={S.btn(false)} onClick={() => setStep(1)}>← Back</button>
               <button
                 style={{ ...S.btn(true), opacity: canCreate ? 1 : 0.4, cursor: canCreate && !creating ? "pointer" : "default" }}
-                onClick={handleCreate} disabled={!canCreate || creating}
+                onClick={() => handleCreate(false)} disabled={!canCreate || creating}
               >
                 {creating ? "Creating…" : `Create ${previewCount} Lessons`}
               </button>
