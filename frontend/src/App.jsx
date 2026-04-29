@@ -114,7 +114,6 @@ export default function App() {
   const [expanded, setExpanded]           = useState(false);
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [seriesOpen, setSeriesOpen]       = useState(false);
-  const [rescheduleTime, setRescheduleTime] = useState({ start: "", end: "" });
   const [searchQuery, setSearchQuery]       = useState("");
   const [notePreview, setNotePreview]       = useState(true);
   const calendarRef   = useRef(null);
@@ -302,32 +301,6 @@ export default function App() {
       console.error("Failed to delete series:", err);
       alert("Network error — could not reach server. Check your connection.");
     }
-  };
-
-  const rescheduleSeries = async (newStart, newEnd) => {
-    if (!selectedEvent) return;
-    const { title } = selectedEvent;
-    try {
-      // Convert local HH:MM → UTC HH:MM before sending so backend just stores as-is
-      const off = new Date().getTimezoneOffset();
-      const toUtc = (t) => {
-        const [h, m] = t.split(":").map(Number);
-        const u = ((h * 60 + m + off) % 1440 + 1440) % 1440;
-        return `${String(Math.floor(u / 60)).padStart(2, "0")}:${String(u % 60).padStart(2, "0")}`;
-      };
-      const body = selectedSeriesId
-        ? { seriesId: selectedSeriesId, startTime: toUtc(newStart), endTime: toUtc(newEnd) }
-        : { title, dayOfWeek: selectedDayOfWeek, startTime: toUtc(newStart), endTime: toUtc(newEnd), tzOffset: off };
-      const res = await fetch(`${API}/lessons/series/reschedule`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const { lessons } = await res.json();
-      setEvents((prev) => {
-        const map = Object.fromEntries(lessons.map((l) => [l._id, l]));
-        return prev.map((e) => map[e.id] ? dbToCalEvent(map[e.id]) : e);
-      });
-    } catch (err) { console.error("Failed to reschedule:", err); }
   };
 
   // ── Reusable field blocks (used in both panel + expanded modal) ──
@@ -613,41 +586,12 @@ export default function App() {
                   style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
                 >Delete This Lesson</button>
 
-                <button onClick={() => {
-                  const opening = !seriesOpen;
-                  setSeriesOpen(opening);
-                  if (opening && selectedEvent) {
-                    const s = new Date(selectedEvent.start);
-                    const e = new Date(selectedEvent.end);
-                    const pad = (n) => String(n).padStart(2, "0");
-                    setRescheduleTime({ start: `${pad(s.getHours())}:${pad(s.getMinutes())}`, end: `${pad(e.getHours())}:${pad(e.getMinutes())}` });
-                  } else {
-                    setRescheduleTime({ start: "", end: "" });
-                  }
-                }}
+                <button onClick={() => setSeriesOpen((p) => !p)}
                   style={{ padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "#f8fafc", color: "#64748b", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
                 >{seriesOpen ? "▲ Hide Series Actions" : `▼ Series Actions (${selectedDayName} ${selectedEvent?.title})`}</button>
 
                 {seriesOpen && (
                   <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <div>
-                      <p style={{ margin: "0 0 6px", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.07em", color: "#64748b" }}>
-                        Reschedule all {selectedDayName} {selectedEvent?.title} ({seriesDayCount} lessons)
-                      </p>
-                      <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
-                        <input type="time" value={rescheduleTime.start} onChange={(e) => setRescheduleTime((p) => ({ ...p, start: e.target.value }))}
-                          style={{ flex: 1, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "6px", color: "#1e293b", padding: "6px 8px", fontSize: "12px", outline: "none", minWidth: "80px" }} />
-                        <span style={{ color: "#94a3b8", fontSize: "12px" }}>→</span>
-                        <input type="time" value={rescheduleTime.end} onChange={(e) => setRescheduleTime((p) => ({ ...p, end: e.target.value }))}
-                          style={{ flex: 1, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "6px", color: "#1e293b", padding: "6px 8px", fontSize: "12px", outline: "none", minWidth: "80px" }} />
-                        <button
-                          disabled={!rescheduleTime.start || !rescheduleTime.end}
-                          onClick={async () => { await rescheduleSeries(rescheduleTime.start, rescheduleTime.end); setSeriesOpen(false); }}
-                          style={{ padding: "6px 10px", borderRadius: "6px", border: "none", background: rescheduleTime.start && rescheduleTime.end ? "#818cf8" : "#e2e8f0", color: rescheduleTime.start && rescheduleTime.end ? "#fff" : "#94a3b8", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
-                        >Apply</button>
-                      </div>
-                    </div>
-
                     <button onClick={() => deleteSeries(true)}
                       style={{ padding: "7px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "12px", fontWeight: "500" }}
                     >Delete all {selectedDayName} "{selectedEvent?.title}" ({seriesDayCount} lessons)</button>
