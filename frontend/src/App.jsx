@@ -197,7 +197,14 @@ export default function App() {
     setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, start: event.startStr, end: event.endStr } : e)));
 
     if (seriesCount > 1) {
-      setDragPending({ changeInfo, seriesId, title: event.title, dow, seriesCount, oldStart: oldEvent.startStr, oldEnd: oldEvent.endStr });
+      setDragPending({
+        eventId: event.id,
+        newStart: event.startStr,
+        newEnd: event.endStr,
+        oldStart: oldEvent.startStr,
+        oldEnd: oldEvent.endStr,
+        seriesId, title: event.title, dow, seriesCount,
+      });
     } else {
       saveLesson(event.id, { start: event.startStr, end: event.endStr });
     }
@@ -205,23 +212,22 @@ export default function App() {
 
   const confirmDrag = (all) => {
     if (!dragPending) return;
-    const { changeInfo, seriesId, title, dow } = dragPending;
-    const { event } = changeInfo;
+    const { eventId, newStart, newEnd, seriesId, title, dow } = dragPending;
     setDragPending(null);
 
     if (!all) {
       // State already correct from handleEventChange — just persist to DB
-      fetch(`${API}/lessons/${event.id}`, {
+      fetch(`${API}/lessons/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ start: event.startStr, end: event.endStr }),
+        body: JSON.stringify({ start: newStart, end: newEnd }),
       }).catch(console.error);
       return;
     }
 
-    // Move all: update local state now, then persist to DB
-    const s = new Date(event.startStr);
-    const e = new Date(event.endStr);
+    // Move all series: apply same HH:MM to every matching event
+    const s = new Date(newStart);
+    const e = new Date(newEnd);
     const newSH = s.getHours(), newSM = s.getMinutes();
     const newEH = e.getHours(), newEM = e.getMinutes();
     setEvents((prev) => prev.map((ev) => {
@@ -252,8 +258,8 @@ export default function App() {
 
   const cancelDrag = () => {
     if (!dragPending) return;
-    const { changeInfo, oldStart, oldEnd } = dragPending;
-    setEvents((prev) => prev.map((e) => (e.id === changeInfo.event.id ? { ...e, start: oldStart, end: oldEnd } : e)));
+    const { eventId, oldStart, oldEnd } = dragPending;
+    setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, start: oldStart, end: oldEnd } : e)));
     setDragPending(null);
   };
 
