@@ -102,11 +102,17 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
 
   const handleCreate = async () => {
     if (!canCreate) return;
-    // Check for existing lessons with same title before creating
-    const duplicates = existingEvents.filter((l) => l.title === title);
-    if (duplicates.length > 0) {
+    // Warn if any selected day already has lessons with this title
+    const conflicts = selDays.filter((day) => {
+      const targetDow = DAY_INDEX[day];
+      return existingEvents.some(
+        (l) => l.title === title.trim() && new Date(l.start).getDay() === targetDow
+      );
+    });
+    if (conflicts.length > 0) {
+      const dayLabels = conflicts.map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(", ");
       const ok = window.confirm(
-        `There are already ${duplicates.length} "${title}" lessons in your calendar.\n\nCreate ${previewCount} more anyway?\n\nTip: use "Delete All Series" on an existing lesson to clear them first.`
+        `"${title.trim()}" already exists on ${dayLabels}.\n\nCreating again will add a duplicate series on top of the existing one.\n\nContinue anyway?`
       );
       if (!ok) return;
     }

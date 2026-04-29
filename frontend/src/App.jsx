@@ -607,7 +607,18 @@ export default function App() {
                   style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
                 >Delete This Lesson</button>
 
-                <button onClick={() => { setSeriesOpen((p) => !p); setRescheduleTime({ start: "", end: "" }); }}
+                <button onClick={() => {
+                  const opening = !seriesOpen;
+                  setSeriesOpen(opening);
+                  if (opening && selectedEvent) {
+                    const s = new Date(selectedEvent.start);
+                    const e = new Date(selectedEvent.end);
+                    const pad = (n) => String(n).padStart(2, "0");
+                    setRescheduleTime({ start: `${pad(s.getHours())}:${pad(s.getMinutes())}`, end: `${pad(e.getHours())}:${pad(e.getMinutes())}` });
+                  } else {
+                    setRescheduleTime({ start: "", end: "" });
+                  }
+                }}
                   style={{ padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "#f8fafc", color: "#64748b", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
                 >{seriesOpen ? "▲ Hide Series Actions" : `▼ Series Actions (${selectedDayName} ${selectedEvent?.title})`}</button>
 
