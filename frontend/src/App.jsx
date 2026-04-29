@@ -289,11 +289,19 @@ export default function App() {
         return new Date(e.start).getDay() === selectedDayOfWeek;
       });
       const ids = toDelete.map((e) => e.id);
-      await fetch(`${API}/lessons/series`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+      const res = await fetch(`${API}/lessons/series`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Delete failed (${res.status}): ${data.error || "unknown error"}`);
+        return;
+      }
       setEvents((prev) => prev.filter((e) => !ids.includes(e.id)));
       setSelectedEventId(null);
       setExpanded(false);
-    } catch (err) { console.error("Failed to delete series:", err); }
+    } catch (err) {
+      console.error("Failed to delete series:", err);
+      alert("Network error — could not reach server. Check your connection.");
+    }
   };
 
   const rescheduleSeries = async (newStart, newEnd) => {
