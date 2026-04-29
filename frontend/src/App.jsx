@@ -115,7 +115,8 @@ export default function App() {
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [seriesOpen, setSeriesOpen]       = useState(false);
   const [dragPending, setDragPending]     = useState(null);
-  const [copyModal, setCopyModal]         = useState({ open: false, start: "", end: "" });
+  const [contextMenu, setContextMenu]     = useState({ open: false, x: 0, y: 0, eventId: null });
+  const [copiedLesson, setCopiedLesson]   = useState(null);
   const [searchQuery, setSearchQuery]       = useState("");
   const [notePreview, setNotePreview]       = useState(true);
   const calendarRef   = useRef(null);
@@ -135,6 +136,17 @@ export default function App() {
   useEffect(() => {
     if (modal.open) setTimeout(() => modalInputRef.current?.focus(), 40);
   }, [modal.open]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") {
+        setCopiedLesson(null);
+        setContextMenu({ open: false, x: 0, y: 0, eventId: null });
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // ── API helpers ─────────────────────────────────────────────
   const saveLesson = async (id, fields) => {
@@ -160,6 +172,10 @@ export default function App() {
 
   const handleSelect = (info) => {
     calendarRef.current?.getApi()?.unselect();
+    if (copiedLesson) {
+      pasteLesson(info.startStr, new Date(new Date(info.startStr).getTime() + copiedLesson.durationMs).toISOString());
+      return;
+    }
     setModal({ open: true, title: "", start: info.startStr, end: info.endStr });
   };
 
@@ -182,8 +198,14 @@ export default function App() {
 
   const closeModal = () => setModal({ open: false, title: "", start: "", end: "" });
 
-  const handleEventClick  = (info) => { setSelectedEventId(info.event.id); setSeriesOpen(false); setNotePreview(true); };
-  const handleDateClick   = () => closePanel();
+  const handleEventClick  = (info) => { setSelectedEventId(info.event.id); setSeriesOpen(false); setNotePreview(true); setContextMenu({ open: false, x: 0, y: 0, eventId: null }); };
+  const handleDateClick   = (info) => {
+    if (copiedLesson) {
+      pasteLesson(info.dateStr, new Date(new Date(info.dateStr).getTime() + copiedLesson.durationMs).toISOString());
+      return;
+    }
+    closePanel();
+  };
   const handleUnselect    = () => setSelectedEventId(null);
 
   const handleEventChange = (changeInfo) => {
@@ -329,31 +351,45 @@ export default function App() {
     }
   };
 
-  const openCopyModal = () => {
-    if (!selectedEvent) return;
-    setCopyModal({ open: true, start: formatDateTimeForInput(selectedEvent.start), end: formatDateTimeForInput(selectedEvent.end) });
+  const handleRightClick = (fcEvent, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ open: true, x: e.clientX, y: e.clientY, eventId: fcEvent.id });
   };
 
-  const handleCopyLesson = async () => {
-    if (!selectedEvent || !copyModal.start || !copyModal.end) return;
+  const handleCopyFromMenu = () => {
+    const ev = events.find((e) => e.id === contextMenu.eventId);
+    if (!ev) return;
+    setCopiedLesson({
+      title: ev.title,
+      status: ev.extendedProps.status,
+      note: ev.extendedProps.note,
+      links: ev.extendedProps.links,
+      durationMs: new Date(ev.end) - new Date(ev.start),
+    });
+    setContextMenu({ open: false, x: 0, y: 0, eventId: null });
+  };
+
+  const pasteLesson = async (start, end) => {
+    if (!copiedLesson) return;
     try {
       const res = await fetch(`${API}/lessons`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: selectedEvent.title,
-          start: copyModal.start,
-          end: copyModal.end,
-          status: selectedEvent.extendedProps.status,
-          note: selectedEvent.extendedProps.note,
-          links: selectedEvent.extendedProps.links,
+          title: copiedLesson.title,
+          start, end,
+          status: copiedLesson.status,
+          note: copiedLesson.note,
+          links: copiedLesson.links,
         }),
       });
       const lesson = await res.json();
       setEvents((prev) => [...prev, dbToCalEvent(lesson)]);
-      setCopyModal({ open: false, start: "", end: "" });
+      setSelectedEventId(lesson._id);
+      setCopiedLesson(null);
     } catch (err) {
-      console.error("Failed to copy lesson:", err);
+      console.error("Failed to paste lesson:", err);
     }
   };
 
@@ -655,7 +691,10 @@ export default function App() {
             eventChange={handleEventChange}
             events={filteredEvents}
             eventContent={(arg) => (
-              <div style={{ padding: "2px 6px", overflow: "hidden", height: "100%", width: "100%", background: arg.event.backgroundColor, borderRadius: "4px" }}>
+              <div
+                onContextMenu={(e) => handleRightClick(arg.event, e)}
+                style={{ padding: "2px 6px", overflow: "hidden", height: "100%", width: "100%", background: arg.event.backgroundColor, borderRadius: "4px", cursor: "context-menu" }}
+              >
                 <div style={{ fontSize: "10px", color: "#fff", opacity: 0.88, whiteSpace: "nowrap" }}>{arg.timeText}</div>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{arg.event.title}</div>
               </div>
@@ -694,9 +733,6 @@ export default function App() {
 
               {/* ── Delete / Series actions ── */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
-                <button onClick={openCopyModal}
-                  style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(129,140,248,0.35)", background: "rgba(129,140,248,0.07)", color: "#818cf8", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
-                >Copy to Another Slot</button>
                 <button onClick={deleteLesson}
                   style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
                 >Delete This Lesson</button>
@@ -824,37 +860,29 @@ export default function App() {
         onCreated={(newLessons) => setEvents((prev) => [...prev, ...newLessons.map(dbToCalEvent)])}
       />
 
-      {/* ── Copy lesson modal ── */}
-      {copyModal.open && (
-        <div onClick={(e) => e.target === e.currentTarget && setCopyModal({ open: false, start: "", end: "" })}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
-          <div style={{ ...card, width: "360px", boxShadow: "0 24px 64px rgba(0,0,0,0.4)" }}>
-            <h3 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: "600", color: "#1e293b" }}>Copy Lesson</h3>
-            <p style={{ margin: "0 0 16px", fontSize: "12px", color: "#818cf8" }}>
-              Copying: <b>{selectedEvent?.title}</b>
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {[["New Start", "start"], ["New End", "end"]].map(([lbl, key]) => (
-                <div key={key}>
-                  <label style={label}>{lbl}</label>
-                  <input
-                    type="datetime-local"
-                    style={{ ...input, fontSize: "12px", padding: "7px 8px" }}
-                    value={copyModal[key]}
-                    onChange={(e) => setCopyModal((p) => ({ ...p, [key]: e.target.value }))}
-                  />
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
-              <button onClick={handleCopyLesson}
-                style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "none", background: "#818cf8", color: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}
-              >Create Copy</button>
-              <button onClick={() => setCopyModal({ open: false, start: "", end: "" })}
-                style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "transparent", color: "#64748b", cursor: "pointer", fontSize: "13px" }}
-              >Cancel</button>
-            </div>
+      {/* ── Right-click context menu ── */}
+      {contextMenu.open && (
+        <div onClick={() => setContextMenu({ open: false, x: 0, y: 0, eventId: null })}
+          style={{ position: "fixed", inset: 0, zIndex: 1200 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "4px", boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 1201, minWidth: "150px" }}>
+            <button onClick={handleCopyFromMenu}
+              style={{ width: "100%", padding: "8px 12px", border: "none", background: "none", textAlign: "left", cursor: "pointer", fontSize: "13px", color: "#1e293b", borderRadius: "4px", display: "flex", alignItems: "center", gap: "8px" }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+            >
+              <span style={{ fontSize: "15px" }}>⎘</span> Copy lesson
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Paste mode banner ── */}
+      {copiedLesson && (
+        <div style={{ position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "11px 18px", borderRadius: "10px", fontSize: "13px", zIndex: 1200, display: "flex", alignItems: "center", gap: "14px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
+          <span>Copied <b style={{ color: "#818cf8" }}>{copiedLesson.title}</b> — click any time slot to paste</span>
+          <button onClick={() => setCopiedLesson(null)}
+            style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: 0 }}>×</button>
         </div>
       )}
 
