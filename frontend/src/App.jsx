@@ -188,10 +188,11 @@ export default function App() {
   const handleEventChange = (changeInfo) => {
     const { event, oldEvent } = changeInfo;
     const seriesId = event.extendedProps?.seriesId ?? null;
-    const dow = new Date(event.startStr).getDay();
+    const oldDow = new Date(oldEvent.startStr).getDay();
+    const newDow = new Date(event.startStr).getDay();
     const seriesCount = seriesId
       ? events.filter((e) => e.extendedProps.seriesId === seriesId).length
-      : events.filter((e) => e.title === event.title && new Date(e.start).getDay() === dow).length;
+      : events.filter((e) => e.title === event.title && new Date(e.start).getDay() === oldDow).length;
 
     // Always move the event in local state so FullCalendar doesn't snap it back
     setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, start: event.startStr, end: event.endStr } : e)));
@@ -203,7 +204,7 @@ export default function App() {
         newEnd: event.endStr,
         oldStart: oldEvent.startStr,
         oldEnd: oldEvent.endStr,
-        seriesId, title: event.title, dow, seriesCount,
+        seriesId, title: event.title, oldDow, newDow, seriesCount,
       });
     } else {
       saveLesson(event.id, { start: event.startStr, end: event.endStr });
@@ -212,7 +213,7 @@ export default function App() {
 
   const confirmDrag = (all) => {
     if (!dragPending) return;
-    const { eventId, newStart, newEnd, seriesId, title, dow } = dragPending;
+    const { eventId, newStart, newEnd, seriesId, title, oldDow, newDow } = dragPending;
     setDragPending(null);
 
     if (!all) {
@@ -225,18 +226,24 @@ export default function App() {
       return;
     }
 
-    // Move all series: apply same HH:MM to every matching event
+    // Move all series: shift each event by dayDiff days + apply new time
     const s = new Date(newStart);
     const e = new Date(newEnd);
     const newSH = s.getHours(), newSM = s.getMinutes();
     const newEH = e.getHours(), newEM = e.getMinutes();
+    const dayDiff = newDow - oldDow;
+
     setEvents((prev) => prev.map((ev) => {
       const matches = seriesId
         ? ev.extendedProps?.seriesId === seriesId
-        : ev.title === title && new Date(ev.start).getDay() === dow;
+        : ev.title === title && new Date(ev.start).getDay() === oldDow;
       if (!matches) return ev;
-      const evS = new Date(ev.start); evS.setHours(newSH, newSM, 0, 0);
-      const evE = new Date(ev.start); evE.setHours(newEH, newEM, 0, 0);
+      const evS = new Date(ev.start);
+      evS.setDate(evS.getDate() + dayDiff);
+      evS.setHours(newSH, newSM, 0, 0);
+      const evE = new Date(ev.start);
+      evE.setDate(evE.getDate() + dayDiff);
+      evE.setHours(newEH, newEM, 0, 0);
       return { ...ev, start: evS.toISOString(), end: evE.toISOString() };
     }));
 
@@ -247,8 +254,8 @@ export default function App() {
       return `${pad(Math.floor(u / 60))}:${pad(u % 60)}`;
     };
     const body = seriesId
-      ? { seriesId, startTime: toUtc(newSH, newSM), endTime: toUtc(newEH, newEM) }
-      : { title, dayOfWeek: dow, startTime: toUtc(newSH, newSM), endTime: toUtc(newEH, newEM), tzOffset: off };
+      ? { seriesId, startTime: toUtc(newSH, newSM), endTime: toUtc(newEH, newEM), dayOffset: dayDiff }
+      : { title, dayOfWeek: oldDow, startTime: toUtc(newSH, newSM), endTime: toUtc(newEH, newEM), tzOffset: off, dayOffset: dayDiff };
     fetch(`${API}/lessons/series/reschedule`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

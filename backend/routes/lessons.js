@@ -47,7 +47,7 @@ router.delete("/series", async (req, res) => {
 
 // PATCH reschedule by seriesId OR title + dayOfWeek
 router.patch("/series/reschedule", async (req, res) => {
-  const { title, dayOfWeek, startTime, endTime, seriesId, tzOffset = 0 } = req.body;
+  const { title, dayOfWeek, startTime, endTime, seriesId, tzOffset = 0, dayOffset = 0 } = req.body;
   if (!startTime || !endTime) return res.status(400).json({ error: "startTime, endTime required" });
   const [sh, sm] = startTime.split(":").map(Number);
   const [eh, em] = endTime.split(":").map(Number);
@@ -62,10 +62,12 @@ router.patch("/series/reschedule", async (req, res) => {
       return new Date(localMs).getUTCDay() === Number(dayOfWeek);
     });
   }
-  // Frontend sends times already converted to UTC
+  const msPerDay = 24 * 60 * 60 * 1000;
   for (const lesson of targets) {
-    const s = new Date(lesson.start); s.setUTCHours(sh, sm, 0, 0);
-    const e = new Date(lesson.start); e.setUTCHours(eh, em, 0, 0);
+    // Shift date by dayOffset days, then apply new UTC time
+    const base = new Date(new Date(lesson.start).getTime() + Number(dayOffset) * msPerDay);
+    const s = new Date(base); s.setUTCHours(sh, sm, 0, 0);
+    const e = new Date(base); e.setUTCHours(eh, em, 0, 0);
     lesson.start = s; lesson.end = e;
     await lesson.save();
   }
