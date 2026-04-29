@@ -231,9 +231,14 @@ export default function App() {
     const e = new Date(newEnd);
     const newSH = s.getHours(), newSM = s.getMinutes();
     const newEH = e.getHours(), newEM = e.getMinutes();
-    const dayDiff = newDow - oldDow;
+
+    // Use actual date difference so backward drags (e.g. Tue→prev Sat) get the right sign
+    const d0 = new Date(oldStart); d0.setHours(0, 0, 0, 0);
+    const d1 = new Date(newStart); d1.setHours(0, 0, 0, 0);
+    const dayDiff = Math.round((d1 - d0) / 86400000);
 
     setEvents((prev) => prev.map((ev) => {
+      if (ev.id === eventId) return ev; // already at correct position from handleEventChange
       const matches = seriesId
         ? ev.extendedProps?.seriesId === seriesId
         : ev.title === title && new Date(ev.start).getDay() === oldDow;
