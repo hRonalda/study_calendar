@@ -84,6 +84,7 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
   const [semEnd, setSemEnd]       = useState("");
   const [creating, setCreating]   = useState(false);
   const [conflictDays, setConflictDays] = useState([]);
+  const [createError, setCreateError]   = useState("");
 
   if (!open) return null;
 
@@ -116,6 +117,7 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
       }
     }
     setConflictDays([]);
+    setCreateError("");
     setCreating(true);
     try {
       const lessons = buildLessons(coursesForCreate, semStart, semEnd);
@@ -124,11 +126,16 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lessons }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setCreateError(`Server error ${res.status}: ${data.error || "unknown"}`);
+        return;
+      }
       const created = await res.json();
       onCreated(created);
       handleClose();
     } catch (err) {
-      console.error("Bulk create failed:", err);
+      setCreateError(`Network error: ${err.message}`);
     } finally {
       setCreating(false);
     }
@@ -137,7 +144,7 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
   const handleClose = () => {
     setStep(1);
     setTitle(""); setSelDays([]); setStartTime("09:00"); setEndTime("11:00");
-    setSemStart(""); setSemEnd(""); setConflictDays([]);
+    setSemStart(""); setSemEnd(""); setConflictDays([]); setCreateError("");
     onClose();
   };
 
@@ -247,6 +254,12 @@ export default function RecurringModal({ open, onClose, onCreated, existingEvent
                 </div>
               )}
             </div>
+
+            {createError && (
+              <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: "8px", padding: "10px 14px", marginTop: "14px", fontSize: "12px", color: "#f87171" }}>
+                {createError}
+              </div>
+            )}
 
             {conflictDays.length > 0 && (
               <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: "8px", padding: "12px 14px", marginTop: "14px" }}>
