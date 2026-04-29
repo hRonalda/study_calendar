@@ -308,10 +308,16 @@ export default function App() {
     if (!selectedEvent) return;
     const { title } = selectedEvent;
     try {
-      const tzOffset = new Date().getTimezoneOffset();
+      // Convert local HH:MM → UTC HH:MM before sending so backend just stores as-is
+      const off = new Date().getTimezoneOffset();
+      const toUtc = (t) => {
+        const [h, m] = t.split(":").map(Number);
+        const u = ((h * 60 + m + off) % 1440 + 1440) % 1440;
+        return `${String(Math.floor(u / 60)).padStart(2, "0")}:${String(u % 60).padStart(2, "0")}`;
+      };
       const body = selectedSeriesId
-        ? { seriesId: selectedSeriesId, startTime: newStart, endTime: newEnd, tzOffset }
-        : { title, dayOfWeek: selectedDayOfWeek, startTime: newStart, endTime: newEnd, tzOffset };
+        ? { seriesId: selectedSeriesId, startTime: toUtc(newStart), endTime: toUtc(newEnd) }
+        : { title, dayOfWeek: selectedDayOfWeek, startTime: toUtc(newStart), endTime: toUtc(newEnd), tzOffset: off };
       const res = await fetch(`${API}/lessons/series/reschedule`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
