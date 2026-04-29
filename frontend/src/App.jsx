@@ -115,6 +115,7 @@ export default function App() {
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [seriesOpen, setSeriesOpen]       = useState(false);
   const [dragPending, setDragPending]     = useState(null);
+  const [copyModal, setCopyModal]         = useState({ open: false, start: "", end: "" });
   const [searchQuery, setSearchQuery]       = useState("");
   const [notePreview, setNotePreview]       = useState(true);
   const calendarRef   = useRef(null);
@@ -325,6 +326,34 @@ export default function App() {
       setExpanded(false);
     } catch (err) {
       console.error("Failed to delete:", err);
+    }
+  };
+
+  const openCopyModal = () => {
+    if (!selectedEvent) return;
+    setCopyModal({ open: true, start: formatDateTimeForInput(selectedEvent.start), end: formatDateTimeForInput(selectedEvent.end) });
+  };
+
+  const handleCopyLesson = async () => {
+    if (!selectedEvent || !copyModal.start || !copyModal.end) return;
+    try {
+      const res = await fetch(`${API}/lessons`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: selectedEvent.title,
+          start: copyModal.start,
+          end: copyModal.end,
+          status: selectedEvent.extendedProps.status,
+          note: selectedEvent.extendedProps.note,
+          links: selectedEvent.extendedProps.links,
+        }),
+      });
+      const lesson = await res.json();
+      setEvents((prev) => [...prev, dbToCalEvent(lesson)]);
+      setCopyModal({ open: false, start: "", end: "" });
+    } catch (err) {
+      console.error("Failed to copy lesson:", err);
     }
   };
 
@@ -665,6 +694,9 @@ export default function App() {
 
               {/* ── Delete / Series actions ── */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
+                <button onClick={openCopyModal}
+                  style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(129,140,248,0.35)", background: "rgba(129,140,248,0.07)", color: "#818cf8", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
+                >Copy to Another Slot</button>
                 <button onClick={deleteLesson}
                   style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
                 >Delete This Lesson</button>
@@ -791,6 +823,40 @@ export default function App() {
         existingEvents={events}
         onCreated={(newLessons) => setEvents((prev) => [...prev, ...newLessons.map(dbToCalEvent)])}
       />
+
+      {/* ── Copy lesson modal ── */}
+      {copyModal.open && (
+        <div onClick={(e) => e.target === e.currentTarget && setCopyModal({ open: false, start: "", end: "" })}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+          <div style={{ ...card, width: "360px", boxShadow: "0 24px 64px rgba(0,0,0,0.4)" }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: "600", color: "#1e293b" }}>Copy Lesson</h3>
+            <p style={{ margin: "0 0 16px", fontSize: "12px", color: "#818cf8" }}>
+              Copying: <b>{selectedEvent?.title}</b>
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {[["New Start", "start"], ["New End", "end"]].map(([lbl, key]) => (
+                <div key={key}>
+                  <label style={label}>{lbl}</label>
+                  <input
+                    type="datetime-local"
+                    style={{ ...input, fontSize: "12px", padding: "7px 8px" }}
+                    value={copyModal[key]}
+                    onChange={(e) => setCopyModal((p) => ({ ...p, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+              <button onClick={handleCopyLesson}
+                style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "none", background: "#818cf8", color: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}
+              >Create Copy</button>
+              <button onClick={() => setCopyModal({ open: false, start: "", end: "" })}
+                style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "transparent", color: "#64748b", cursor: "pointer", fontSize: "13px" }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Drag choice dialog ── */}
       {dragPending && (
