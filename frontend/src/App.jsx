@@ -114,6 +114,7 @@ export default function App() {
   const [expanded, setExpanded]           = useState(false);
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [seriesOpen, setSeriesOpen]       = useState(false);
+  const [dragPending, setDragPending]     = useState(null);
   const [searchQuery, setSearchQuery]       = useState("");
   const [notePreview, setNotePreview]       = useState(true);
   const calendarRef   = useRef(null);
@@ -186,10 +187,63 @@ export default function App() {
 
   const handleEventChange = (changeInfo) => {
     const { event } = changeInfo;
-    setEvents((prev) =>
-      prev.map((e) => (e.id === event.id ? { ...e, start: event.startStr, end: event.endStr } : e))
-    );
-    saveLesson(event.id, { start: event.startStr, end: event.endStr });
+    const seriesId = event.extendedProps?.seriesId ?? null;
+    const dow = new Date(event.startStr).getDay();
+    const seriesCount = seriesId
+      ? events.filter((e) => e.extendedProps.seriesId === seriesId).length
+      : events.filter((e) => e.title === event.title && new Date(e.start).getDay() === dow).length;
+
+    if (seriesCount > 1) {
+      setDragPending({ changeInfo, seriesId, title: event.title, dow, seriesCount });
+    } else {
+      setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, start: event.startStr, end: event.endStr } : e)));
+      saveLesson(event.id, { start: event.startStr, end: event.endStr });
+    }
+  };
+
+  const confirmDrag = async (all) => {
+    if (!dragPending) return;
+    const { changeInfo, seriesId, title, dow, seriesCount } = dragPending;
+    const { event } = changeInfo;
+    setDragPending(null);
+
+    if (!all) {
+      setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, start: event.startStr, end: event.endStr } : e)));
+      saveLesson(event.id, { start: event.startStr, end: event.endStr });
+      return;
+    }
+
+    // Move all: compute new UTC HH:MM from dragged event
+    const s = new Date(event.startStr);
+    const e = new Date(event.endStr);
+    const pad = (n) => String(n).padStart(2, "0");
+    const off = new Date().getTimezoneOffset();
+    const toUtc = (h, m) => {
+      const u = ((h * 60 + m + off) % 1440 + 1440) % 1440;
+      return `${pad(Math.floor(u / 60))}:${pad(u % 60)}`;
+    };
+    const startTime = toUtc(s.getHours(), s.getMinutes());
+    const endTime   = toUtc(e.getHours(), e.getMinutes());
+    const body = seriesId
+      ? { seriesId, startTime, endTime }
+      : { title, dayOfWeek: dow, startTime, endTime, tzOffset: off };
+    try {
+      const res = await fetch(`${API}/lessons/series/reschedule`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const { lessons } = await res.json();
+      setEvents((prev) => {
+        const map = Object.fromEntries(lessons.map((l) => [l._id, l]));
+        return prev.map((ev) => map[ev.id] ? dbToCalEvent(map[ev.id]) : ev);
+      });
+    } catch (err) { console.error("Reschedule series failed:", err); }
+  };
+
+  const cancelDrag = () => {
+    if (!dragPending) return;
+    dragPending.changeInfo.revert();
+    setDragPending(null);
   };
 
   // ── Local state patchers ─────────────────────────────────────
@@ -706,8 +760,31 @@ export default function App() {
         open={recurringOpen}
         onClose={() => setRecurringOpen(false)}
         existingEvents={events}
-      onCreated={(newLessons) => setEvents((prev) => [...prev, ...newLessons.map(dbToCalEvent)])}
+        onCreated={(newLessons) => setEvents((prev) => [...prev, ...newLessons.map(dbToCalEvent)])}
       />
+
+      {/* ── Drag choice dialog ── */}
+      {dragPending && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+          <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", width: "340px", boxShadow: "0 24px 64px rgba(0,0,0,0.25)", border: "1px solid #e2e8f0" }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: "600", color: "#1e293b" }}>Move lesson</h3>
+            <p style={{ margin: "0 0 18px", fontSize: "13px", color: "#64748b", lineHeight: "1.5" }}>
+              Move just <b>this one</b>, or move <b>all {dragPending.seriesCount} lessons</b> in this series to the new time?
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <button onClick={() => confirmDrag(false)}
+                style={{ padding: "9px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "#f8fafc", color: "#1e293b", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}
+              >Only this lesson</button>
+              <button onClick={() => confirmDrag(true)}
+                style={{ padding: "9px", borderRadius: "6px", border: "none", background: "#818cf8", color: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}
+              >All {dragPending.seriesCount} lessons in this series</button>
+              <button onClick={cancelDrag}
+                style={{ padding: "7px", borderRadius: "6px", border: "none", background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: "12px" }}
+              >Cancel (undo drag)</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
