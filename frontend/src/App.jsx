@@ -186,17 +186,19 @@ export default function App() {
   const handleUnselect    = () => setSelectedEventId(null);
 
   const handleEventChange = (changeInfo) => {
-    const { event } = changeInfo;
+    const { event, oldEvent } = changeInfo;
     const seriesId = event.extendedProps?.seriesId ?? null;
     const dow = new Date(event.startStr).getDay();
     const seriesCount = seriesId
       ? events.filter((e) => e.extendedProps.seriesId === seriesId).length
       : events.filter((e) => e.title === event.title && new Date(e.start).getDay() === dow).length;
 
+    // Always move the event in local state so FullCalendar doesn't snap it back
+    setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, start: event.startStr, end: event.endStr } : e)));
+
     if (seriesCount > 1) {
-      setDragPending({ changeInfo, seriesId, title: event.title, dow, seriesCount });
+      setDragPending({ changeInfo, seriesId, title: event.title, dow, seriesCount, oldStart: oldEvent.startStr, oldEnd: oldEvent.endStr });
     } else {
-      setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, start: event.startStr, end: event.endStr } : e)));
       saveLesson(event.id, { start: event.startStr, end: event.endStr });
     }
   };
@@ -208,7 +210,6 @@ export default function App() {
     setDragPending(null);
 
     if (!all) {
-      setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, start: event.startStr, end: event.endStr } : e)));
       saveLesson(event.id, { start: event.startStr, end: event.endStr });
       return;
     }
@@ -242,7 +243,8 @@ export default function App() {
 
   const cancelDrag = () => {
     if (!dragPending) return;
-    dragPending.changeInfo.revert();
+    const { changeInfo, oldStart, oldEnd } = dragPending;
+    setEvents((prev) => prev.map((e) => (e.id === changeInfo.event.id ? { ...e, start: oldStart, end: oldEnd } : e)));
     setDragPending(null);
   };
 
