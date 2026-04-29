@@ -148,6 +148,14 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Close context menu when clicking anywhere outside it
+  useEffect(() => {
+    if (!contextMenu.open) return;
+    const close = () => setContextMenu({ open: false, x: 0, y: 0, eventId: null });
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [contextMenu.open]);
+
   // ── API helpers ─────────────────────────────────────────────
   const saveLesson = async (id, fields) => {
     try {
@@ -692,6 +700,7 @@ export default function App() {
             events={filteredEvents}
             eventContent={(arg) => (
               <div
+                onMouseDown={(e) => { if (e.button === 2) e.stopPropagation(); }}
                 onContextMenu={(e) => handleRightClick(arg.event, e)}
                 style={{ padding: "2px 6px", overflow: "hidden", height: "100%", width: "100%", background: arg.event.backgroundColor, borderRadius: "4px", cursor: "context-menu" }}
               >
@@ -862,18 +871,17 @@ export default function App() {
 
       {/* ── Right-click context menu ── */}
       {contextMenu.open && (
-        <div onClick={() => setContextMenu({ open: false, x: 0, y: 0, eventId: null })}
-          style={{ position: "fixed", inset: 0, zIndex: 1200 }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "4px", boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 1201, minWidth: "150px" }}>
-            <button onClick={handleCopyFromMenu}
-              style={{ width: "100%", padding: "8px 12px", border: "none", background: "none", textAlign: "left", cursor: "pointer", fontSize: "13px", color: "#1e293b", borderRadius: "4px", display: "flex", alignItems: "center", gap: "8px" }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-            >
-              <span style={{ fontSize: "15px" }}>⎘</span> Copy lesson
-            </button>
-          </div>
+        <div
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "4px", boxShadow: "0 8px 24px rgba(0,0,0,0.16)", zIndex: 1300, minWidth: "150px" }}
+        >
+          <button onClick={handleCopyFromMenu}
+            style={{ width: "100%", padding: "9px 14px", border: "none", background: "none", textAlign: "left", cursor: "pointer", fontSize: "13px", color: "#1e293b", borderRadius: "5px", display: "flex", alignItems: "center", gap: "8px" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+          >
+            <span>⎘</span> Copy lesson
+          </button>
         </div>
       )}
 
