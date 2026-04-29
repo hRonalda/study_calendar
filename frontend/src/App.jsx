@@ -310,7 +310,7 @@ export default function App() {
     try {
       const tzOffset = new Date().getTimezoneOffset();
       const body = selectedSeriesId
-        ? { seriesId: selectedSeriesId, startTime: newStart, endTime: newEnd }
+        ? { seriesId: selectedSeriesId, startTime: newStart, endTime: newEnd, tzOffset }
         : { title, dayOfWeek: selectedDayOfWeek, startTime: newStart, endTime: newEnd, tzOffset };
       const res = await fetch(`${API}/lessons/series/reschedule`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },

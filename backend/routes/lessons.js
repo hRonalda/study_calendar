@@ -62,9 +62,12 @@ router.patch("/series/reschedule", async (req, res) => {
       return new Date(localMs).getUTCDay() === Number(dayOfWeek);
     });
   }
+  const toUtcMins = (h, m) => ((h * 60 + m + Number(tzOffset)) % 1440 + 1440) % 1440;
+  const [sUtcH, sUtcM] = [Math.floor(toUtcMins(sh, sm) / 60), toUtcMins(sh, sm) % 60];
+  const [eUtcH, eUtcM] = [Math.floor(toUtcMins(eh, em) / 60), toUtcMins(eh, em) % 60];
   for (const lesson of targets) {
-    const s = new Date(lesson.start); s.setHours(sh, sm, 0, 0);
-    const e = new Date(lesson.start); e.setHours(eh, em, 0, 0);
+    const s = new Date(lesson.start); s.setUTCHours(sUtcH, sUtcM, 0, 0);
+    const e = new Date(lesson.start); e.setUTCHours(eUtcH, eUtcM, 0, 0);
     lesson.start = s; lesson.end = e;
     await lesson.save();
   }
