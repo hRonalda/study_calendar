@@ -213,7 +213,7 @@ export default function App() {
 
   const confirmDrag = (all) => {
     if (!dragPending) return;
-    const { eventId, newStart, newEnd, seriesId, title, oldDow, newDow } = dragPending;
+    const { eventId, newStart, newEnd, seriesId, title, oldDow } = dragPending;
     setDragPending(null);
 
     if (!all) {
