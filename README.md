@@ -1,28 +1,43 @@
-# Study Calendar App — v2
+# Study Calendar
 
-A study planner combining a weekly calendar, lesson notes, and resource links in one page. Built to manage university courses with recurring schedules.
+A personal study planner built for university students. Schedule recurring weekly courses, track lesson progress, manage exams, and keep notes — all in one calendar view.
 
-## Live Demo
+**Try it live → [study-calendar-hazel.vercel.app](https://study-calendar-hazel.vercel.app)**
 
-The app is publicly accessible — no install needed:
+---
 
-> **https://study-calendar-hazel.vercel.app**
+## What it does
 
-Anyone with the link can open it directly in a browser. Note that all visitors currently share the same calendar (see Known Limitations below).
+**Recurring course scheduler** — pick a course name, days of the week, time slot, and semester date range. The app generates all lessons at once.
 
-## Features
+**Smart drag-and-drop** — drag any lesson to reschedule it. If it belongs to a weekly series, choose to move just that one or the entire series (day + time both update correctly).
 
-- **Weekly / month / day calendar** — powered by FullCalendar 6
-- **Lesson detail panel** — click any event to edit title, status, notes, and resource links
-- **Full-screen expand view** — open any lesson in a full-screen view to write detailed notes (Markdown supported) and attach resource links
-- **Status tracking** — Planned / In Progress / Done with color-coded events and a progress bar
-- **Search** — filter lessons by title or note content
-- **Recurring lesson scheduler** — create a full semester's worth of lessons in one click (course name, days of week, time slot, date range)
-- **Smart drag-and-drop** — drag a lesson to reschedule; if it belongs to a series, choose to move just that one or the entire series (day + time both update correctly)
-- **Series delete** — remove all lessons on a given day, or all lessons across all days for a course
-- **Persistent storage** — MongoDB Atlas (cloud), Express REST API on Railway
+**Exam tracking** — mark any event as an Exam (shown in red). A live counter shows how many exams are done and how many are still upcoming.
 
-## Tech Stack
+**Lesson notes** — write Markdown notes per lesson, attach resource links, and YouTube links auto-embed in the expanded view.
+
+**Progress stats** — overall completion bar, status counts (Planned / In Progress / Done), this week's lessons, and exam summary.
+
+**Search** — filter all events by title or note content instantly.
+
+---
+
+## How to use
+
+| Action | How |
+|---|---|
+| Add a single lesson | Click or drag any empty time slot |
+| Add recurring courses | Click **+ Schedule Recurring** (top right) |
+| Edit a lesson | Click the event → detail panel opens on the right |
+| Reschedule | Drag the event to a new slot |
+| Move entire series | Drag → choose "All X lessons in this series" |
+| Mark as Exam | Click the event → set Type to Exam |
+| Delete a series | Click the event → Series Actions |
+| Expand full view | Click ⤢ in the panel header |
+
+---
+
+## Tech stack
 
 | Layer | Technology |
 |---|---|
@@ -31,39 +46,17 @@ Anyone with the link can open it directly in a browser. Note that all visitors c
 | Database | MongoDB Atlas |
 | Hosting | Vercel (frontend) + Railway (backend) |
 
-## Usage
+---
 
-| Action | How |
-|---|---|
-| Add a lesson | Click or drag any time slot on the calendar |
-| Edit a lesson | Click the event → detail panel on the right |
-| Full view | Click ⤢ in the panel header |
-| Schedule recurring | Click **+ Schedule Recurring** (top right) |
-| Move a lesson | Drag it — if part of a series, choose "only this" or "all in series" |
-| Delete a series | Click a lesson → Series Actions |
+## Current limitations
 
-## Known Limitations / Drawbacks
+- **No accounts** — all visitors share the same calendar. Not suitable for multiple independent users yet.
+- **No undo** — deleting a lesson or series is permanent.
+- **No offline support** — requires a live connection to the backend.
 
-These are known issues to fix before this app is ready for wider sharing:
+---
 
-1. **No authentication** — there is no login system. Everyone who visits the URL shares the same calendar and can create, edit, or delete any lesson. Not suitable for multiple independent users.
-
-2. **Single shared database** — all data is in one MongoDB collection with no user separation. If shared with others, all users see and modify the same lessons.
-
-3. **Post-push hook clears the DB** — a `.git/hooks/post-push` script automatically deletes all lessons after every `git push`. This is a development convenience tool and must be removed or disabled before sharing the app with real users, or all data will be wiped on every code update.
-
-4. **No offline support** — the app requires a live internet connection to Railway (backend) and MongoDB Atlas. There is no caching or offline fallback.
-
-5. **No undo** — deleting a lesson or series is permanent with no undo. A confirmation dialog is shown but there is no recovery after confirming.
-
-## Local Development
-
-### Prerequisites
-
-- Node.js 18+
-- MongoDB (local) or a MongoDB Atlas connection string
-
-### Installation
+## Run locally
 
 ```bash
 git clone https://github.com/hRonalda/study_calendar.git
@@ -73,16 +66,12 @@ cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### Configuration
-
 Create `backend/.env`:
 
-```env
-MONGO_URI=mongodb://localhost:27017/study_app
+```
+MONGO_URI=your_mongodb_connection_string
 PORT=5001
 ```
-
-### Running locally
 
 ```bash
 # Terminal 1 — backend
@@ -92,4 +81,4 @@ cd backend && npm run dev
 cd frontend && npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173)
