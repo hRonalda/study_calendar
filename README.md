@@ -14,7 +14,7 @@ Anyone with the link can open it directly in a browser. Note that all visitors c
 
 - **Weekly / month / day calendar** — powered by FullCalendar 6
 - **Lesson detail panel** — click any event to edit title, status, notes, and resource links
-- **Full-screen expand view** — focused two-column layout with large notes area and YouTube auto-embed
+- **Full-screen expand view** — open any lesson in a full-screen view to write detailed notes (Markdown supported) and attach resource links
 - **Status tracking** — Planned / In Progress / Done with color-coded events and a progress bar
 - **Search** — filter lessons by title or note content
 - **Recurring lesson scheduler** — create a full semester's worth of lessons in one click (course name, days of week, time slot, date range)
