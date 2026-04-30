@@ -11,6 +11,7 @@ const lessonSchema = new mongoose.Schema(
       enum: ["planned", "in_progress", "done"],
       default: "planned",
     },
+    type: { type: String, enum: ["lesson", "exam"], default: "lesson" },
     note: { type: String, default: "" },
     links: { type: [String], default: [] },
     color: { type: String, default: null },

@@ -17,12 +17,15 @@ const STATUS_META = {
 };
 
 
-function getEventColor(status) {
+const EXAM_COLOR = "#ef4444";
+
+function getEventColor(status, type) {
+  if (type === "exam") return EXAM_COLOR;
   return STATUS_META[status]?.color ?? STATUS_META.planned.color;
 }
 
 function dbToCalEvent(lesson) {
-  const color = getEventColor(lesson.status);
+  const color = getEventColor(lesson.status, lesson.type);
   return {
     id: lesson._id,
     title: lesson.title,
@@ -33,6 +36,7 @@ function dbToCalEvent(lesson) {
     extendedProps: {
       note: lesson.note || "",
       status: lesson.status,
+      type: lesson.type || "lesson",
       links: lesson.links || [],
       seriesId: lesson.seriesId || null,
     },
@@ -283,7 +287,7 @@ export default function App() {
     if (!selectedEventId) return;
     patchLocal(selectedEventId, (e) => {
       const props = { ...e.extendedProps, ...(fields.extendedProps || {}) };
-      const color = getEventColor(props.status || "planned");
+      const color = getEventColor(props.status || "planned", props.type || "lesson");
       return { ...e, ...fields, extendedProps: props, backgroundColor: color, borderColor: color };
     });
   };
@@ -417,6 +421,32 @@ export default function App() {
                 letterSpacing: "0.02em", transition: "all 0.12s",
               }}
             >{meta.label}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const curType = selectedEvent?.extendedProps?.type ?? "lesson";
+
+  const TypeField = () => (
+    <div>
+      <label style={label}>Type</label>
+      <div style={{ display: "flex", gap: "6px" }}>
+        {[["lesson", "Lesson", "#818cf8"], ["exam", "Exam", EXAM_COLOR]].map(([key, lbl, color]) => {
+          const active = curType === key;
+          return (
+            <button key={key}
+              onClick={() => { updateSelected({ extendedProps: { type: key } }); saveLesson(selectedEventId, { type: key }); }}
+              style={{
+                flex: 1, padding: "5px 0", borderRadius: "20px",
+                border: `1px solid ${active ? color : "#e2e8f0"}`,
+                background: active ? `${color}22` : "transparent",
+                color: active ? color : "#94a3b8",
+                fontSize: "11px", fontWeight: "600", cursor: "pointer",
+                letterSpacing: "0.02em", transition: "all 0.12s",
+              }}
+            >{lbl}</button>
           );
         })}
       </div>
@@ -657,6 +687,7 @@ export default function App() {
               </div>
 
               {TitleField()}
+              {TypeField()}
               {StatusField()}
 
               {DateFields()}
@@ -732,8 +763,9 @@ export default function App() {
               {/* Left — meta */}
               <div style={{ width: "240px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px", overflowY: "auto" }}>
                 {TitleField()}
+                {TypeField()}
                 {StatusField()}
-  
+
                 {DateFields()}
                 <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid #e2e8f0" }}>
                   <button onClick={deleteLesson}
