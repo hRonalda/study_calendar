@@ -115,8 +115,6 @@ export default function App() {
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [seriesOpen, setSeriesOpen]       = useState(false);
   const [dragPending, setDragPending]     = useState(null);
-  const [contextMenu, setContextMenu]     = useState({ open: false, x: 0, y: 0, eventId: null });
-  const [copiedLesson, setCopiedLesson]   = useState(null);
   const [searchQuery, setSearchQuery]       = useState("");
   const [notePreview, setNotePreview]       = useState(true);
   const calendarRef   = useRef(null);
@@ -136,25 +134,6 @@ export default function App() {
   useEffect(() => {
     if (modal.open) setTimeout(() => modalInputRef.current?.focus(), 40);
   }, [modal.open]);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === "Escape") {
-        setCopiedLesson(null);
-        setContextMenu({ open: false, x: 0, y: 0, eventId: null });
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-  // Close context menu when clicking anywhere outside it
-  useEffect(() => {
-    if (!contextMenu.open) return;
-    const close = () => setContextMenu({ open: false, x: 0, y: 0, eventId: null });
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [contextMenu.open]);
 
   // ── API helpers ─────────────────────────────────────────────
   const saveLesson = async (id, fields) => {
@@ -180,10 +159,6 @@ export default function App() {
 
   const handleSelect = (info) => {
     calendarRef.current?.getApi()?.unselect();
-    if (copiedLesson) {
-      pasteLesson(info.startStr, new Date(new Date(info.startStr).getTime() + copiedLesson.durationMs).toISOString());
-      return;
-    }
     setModal({ open: true, title: "", start: info.startStr, end: info.endStr });
   };
 
@@ -206,14 +181,8 @@ export default function App() {
 
   const closeModal = () => setModal({ open: false, title: "", start: "", end: "" });
 
-  const handleEventClick  = (info) => { setSelectedEventId(info.event.id); setSeriesOpen(false); setNotePreview(true); setContextMenu({ open: false, x: 0, y: 0, eventId: null }); };
-  const handleDateClick   = (info) => {
-    if (copiedLesson) {
-      pasteLesson(info.dateStr, new Date(new Date(info.dateStr).getTime() + copiedLesson.durationMs).toISOString());
-      return;
-    }
-    closePanel();
-  };
+  const handleEventClick  = (info) => { setSelectedEventId(info.event.id); setSeriesOpen(false); setNotePreview(true); };
+  const handleDateClick   = () => closePanel();
   const handleUnselect    = () => setSelectedEventId(null);
 
   const handleEventChange = (changeInfo) => {
@@ -356,48 +325,6 @@ export default function App() {
       setExpanded(false);
     } catch (err) {
       console.error("Failed to delete:", err);
-    }
-  };
-
-  const handleRightClick = (fcEvent, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ open: true, x: e.clientX, y: e.clientY, eventId: fcEvent.id });
-  };
-
-  const handleCopyFromMenu = () => {
-    const ev = events.find((e) => e.id === contextMenu.eventId);
-    if (!ev) return;
-    setCopiedLesson({
-      title: ev.title,
-      status: ev.extendedProps.status,
-      note: ev.extendedProps.note,
-      links: ev.extendedProps.links,
-      durationMs: new Date(ev.end) - new Date(ev.start),
-    });
-    setContextMenu({ open: false, x: 0, y: 0, eventId: null });
-  };
-
-  const pasteLesson = async (start, end) => {
-    if (!copiedLesson) return;
-    try {
-      const res = await fetch(`${API}/lessons`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: copiedLesson.title,
-          start, end,
-          status: copiedLesson.status,
-          note: copiedLesson.note,
-          links: copiedLesson.links,
-        }),
-      });
-      const lesson = await res.json();
-      setEvents((prev) => [...prev, dbToCalEvent(lesson)]);
-      setSelectedEventId(lesson._id);
-      setCopiedLesson(null);
-    } catch (err) {
-      console.error("Failed to paste lesson:", err);
     }
   };
 
@@ -699,11 +626,7 @@ export default function App() {
             eventChange={handleEventChange}
             events={filteredEvents}
             eventContent={(arg) => (
-              <div
-                onMouseDown={(e) => { if (e.button === 2) e.stopPropagation(); }}
-                onContextMenu={(e) => handleRightClick(arg.event, e)}
-                style={{ padding: "2px 6px", overflow: "hidden", height: "100%", width: "100%", background: arg.event.backgroundColor, borderRadius: "4px", cursor: "context-menu" }}
-              >
+              <div style={{ padding: "2px 6px", overflow: "hidden", height: "100%", width: "100%", background: arg.event.backgroundColor, borderRadius: "4px" }}>
                 <div style={{ fontSize: "10px", color: "#fff", opacity: 0.88, whiteSpace: "nowrap" }}>{arg.timeText}</div>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{arg.event.title}</div>
               </div>
@@ -868,31 +791,6 @@ export default function App() {
         existingEvents={events}
         onCreated={(newLessons) => setEvents((prev) => [...prev, ...newLessons.map(dbToCalEvent)])}
       />
-
-      {/* ── Right-click context menu ── */}
-      {contextMenu.open && (
-        <div
-          onMouseDown={(e) => e.stopPropagation()}
-          style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "4px", boxShadow: "0 8px 24px rgba(0,0,0,0.16)", zIndex: 1300, minWidth: "150px" }}
-        >
-          <button onClick={handleCopyFromMenu}
-            style={{ width: "100%", padding: "9px 14px", border: "none", background: "none", textAlign: "left", cursor: "pointer", fontSize: "13px", color: "#1e293b", borderRadius: "5px", display: "flex", alignItems: "center", gap: "8px" }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-          >
-            <span>⎘</span> Copy lesson
-          </button>
-        </div>
-      )}
-
-      {/* ── Paste mode banner ── */}
-      {copiedLesson && (
-        <div style={{ position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)", background: "#1e293b", color: "#fff", padding: "11px 18px", borderRadius: "10px", fontSize: "13px", zIndex: 1200, display: "flex", alignItems: "center", gap: "14px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
-          <span>Copied <b style={{ color: "#818cf8" }}>{copiedLesson.title}</b> — click any time slot to paste</span>
-          <button onClick={() => setCopiedLesson(null)}
-            style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: 0 }}>×</button>
-        </div>
-      )}
 
       {/* ── Drag choice dialog ── */}
       {dragPending && (
