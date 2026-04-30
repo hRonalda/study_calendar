@@ -360,6 +360,10 @@ export default function App() {
   const weekDone    = weekEvents.filter((e) => e.extendedProps.status === "done").length;
   const totalCount  = events.length;
   const doneCount   = events.filter((e) => e.extendedProps.status === "done").length;
+  const examEvents  = events.filter((e) => e.extendedProps.type === "exam");
+  const examTotal   = examEvents.length;
+  const examDone    = examEvents.filter((e) => e.extendedProps.status === "done").length;
+  const examUpcoming = examEvents.filter((e) => e.extendedProps.status !== "done" && new Date(e.start) >= new Date()).length;
 
   const deleteSeries = async (dayOnly) => {
     if (!selectedEvent) return;
@@ -630,6 +634,12 @@ export default function App() {
         <div style={{ padding: "4px 12px", borderRadius: "20px", background: "rgba(129,140,248,0.08)", border: "1px solid rgba(129,140,248,0.22)", fontSize: "12px", color: "#818cf8", fontWeight: "600", whiteSpace: "nowrap" }}>
           This week: {weekDone} / {weekTotal}
         </div>
+        {/* Exams */}
+        {examTotal > 0 && (
+          <div style={{ padding: "4px 12px", borderRadius: "20px", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)", fontSize: "12px", color: "#ef4444", fontWeight: "600", whiteSpace: "nowrap" }}>
+            Exams: {examDone}/{examTotal} done · {examUpcoming} upcoming
+          </div>
+        )}
         {/* Search result count */}
         {searchQuery.trim() && (
           <div style={{ padding: "4px 10px", borderRadius: "20px", background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.3)", fontSize: "12px", color: "#fb923c", fontWeight: "600" }}>
@@ -698,7 +708,7 @@ export default function App() {
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
                 <button onClick={deleteLesson}
                   style={{ padding: "9px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
-                >Delete This Lesson</button>
+                >Delete This {curType === "exam" ? "Exam" : "Lesson"}</button>
 
                 <button onClick={() => setSeriesOpen((p) => !p)}
                   style={{ padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "#f8fafc", color: "#64748b", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
@@ -708,12 +718,12 @@ export default function App() {
                   <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
                     <button onClick={() => deleteSeries(true)}
                       style={{ padding: "7px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "12px", fontWeight: "500" }}
-                    >Delete all {selectedDayName} "{selectedEvent?.title}" ({seriesDayCount} lessons)</button>
+                    >Delete all {selectedDayName} "{selectedEvent?.title}" ({seriesDayCount} {curType === "exam" ? "exams" : "lessons"})</button>
 
                     {seriesTotalCount > seriesDayCount && (
                       <button onClick={() => deleteSeries(false)}
                         style={{ padding: "7px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.18)", background: "transparent", color: "#ef4444", cursor: "pointer", fontSize: "11px", opacity: 0.7 }}
-                      >Delete ALL "{selectedEvent?.title}" every day ({seriesTotalCount} lessons)</button>
+                      >Delete ALL "{selectedEvent?.title}" every day ({seriesTotalCount} {curType === "exam" ? "exams" : "lessons"})</button>
                     )}
                   </div>
                 )}
@@ -770,7 +780,7 @@ export default function App() {
                 <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid #e2e8f0" }}>
                   <button onClick={deleteLesson}
                     style={{ width: "100%", padding: "9px", borderRadius: "6px", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.05)", color: "#ef4444", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}
-                  >Delete Lesson</button>
+                  >Delete {curType === "exam" ? "Exam" : "Lesson"}</button>
                 </div>
               </div>
 
